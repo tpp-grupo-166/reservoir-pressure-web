@@ -77,6 +77,18 @@ def build_features(history: pd.DataFrame, static: dict, pvt: pd.DataFrame) -> pd
     return f.fillna(0.0)
 
 
+def bubble_point(pvt: pd.DataFrame) -> float:
+    """Estima el punto de burbuja: la presión donde Bo es máximo.
+
+    Para un crudo negro, Bo crece al bajar la presión (el gas sigue disuelto e hincha el
+    aceite) hasta el punto de burbuja, y decrece por debajo (el gas se libera). El máximo
+    de la curva Bo marca, entonces, la presión de burbuja.
+    """
+    bo = pvt["bo_rb_stb"].to_numpy()
+    p = pvt["p_grid_psi"].to_numpy()
+    return float(p[int(np.argmax(bo))])
+
+
 def build_pvt_vector(pvt: pd.DataFrame) -> np.ndarray:
     """Vector PVT de 51D que ve el encoder: [Bo·17, Bg·17·1000, Rs·17/1000].
 

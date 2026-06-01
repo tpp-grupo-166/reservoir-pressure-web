@@ -29,6 +29,14 @@ class Prediction(BaseModel):
     tiempo_dias: list[float]
     presion_estimada_psi: list[float]
     presion_inicial_psi: float
+    banda_inferior_psi: list[float]   # incertidumbre (ensemble de seeds): mínimo
+    banda_superior_psi: list[float]   # incertidumbre (ensemble de seeds): máximo
+
+
+class Drivers(BaseModel):
+    """Caudales de entrada que el modelo usa (para el panel de contexto)."""
+    caudal_petroleo_bbl: list[float]
+    caudal_iny_agua_bbl: list[float]
 
 
 class Baseline(BaseModel):
@@ -71,6 +79,9 @@ class ModelInfo(BaseModel):
 class PredictResponse(BaseModel):
     prediction: Prediction
     baseline: Baseline
+    bubble_point_psi: float | None    # punto de burbuja (None si no se pudo derivar del PVT)
+    vrr: list[float]                  # voidage replacement ratio por timestep
+    drivers: Drivers
     explainability: Explainability
     model_info: ModelInfo
 

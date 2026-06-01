@@ -12,6 +12,13 @@ export interface Prediction {
   tiempo_dias: number[];
   presion_estimada_psi: number[];
   presion_inicial_psi: number;
+  banda_inferior_psi: number[];
+  banda_superior_psi: number[];
+}
+
+export interface Drivers {
+  caudal_petroleo_bbl: number[];
+  caudal_iny_agua_bbl: number[];
 }
 
 export interface Baseline {
@@ -54,6 +61,9 @@ export interface ModelInfo {
 export interface PredictResponse {
   prediction: Prediction;
   baseline: Baseline;
+  bubble_point_psi: number | null;
+  vrr: number[];
+  drivers: Drivers;
   explainability: Explainability;
   model_info: ModelInfo;
 }

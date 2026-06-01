@@ -13,9 +13,9 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 import model
-from features import FEATURE_DOCS
+from features import FEATURE_DOCS, bubble_point, build_features
 from schemas import (
-    Baseline, Explainability, ModelInfo, Prediction, PredictResponse,
+    Baseline, Drivers, Explainability, ModelInfo, Prediction, PredictResponse,
     StaticProps, ValidateResponse, ValidationMetrics,
 )
 from validation import ValidationError, read_csv, validate_history, validate_pvt
@@ -38,10 +38,11 @@ def health() -> dict:
 
 @app.get("/api/model-info", response_model=ModelInfo)
 def model_info() -> ModelInfo:
+    p = model.Predictor.instance()
     return ModelInfo(
-        version=model.MODEL_VERSION,
-        metricas_validacion=ValidationMetrics(**model.VALIDATION_METRICS),
-        nota=model.MODEL_NOTE,
+        version=p.version,
+        metricas_validacion=ValidationMetrics(**p.metrics),
+        nota=p.note,
     )
 
 
@@ -102,18 +103,31 @@ async def predict(
     static_dict = static.model_dump()
 
     predictor = model.Predictor.instance()
-    pred = predictor.predict(history, static_dict, pvt)
-    base = model.mean_curve_baseline(history, static_dict)
+    pred, lower, upper = predictor.predict_band(history, static_dict, pvt)
+    base = predictor.baseline(history, static_dict)
+
+    feats = build_features(history, static_dict, pvt)
+
+    def r1(arr):
+        return [round(float(v), 1) for v in arr]
 
     return PredictResponse(
         prediction=Prediction(
             tiempo_dias=history["tiempo_dias"].tolist(),
-            presion_estimada_psi=[round(float(v), 1) for v in pred],
+            presion_estimada_psi=r1(pred),
             presion_inicial_psi=static.presion_inicial_psi,
+            banda_inferior_psi=r1(lower),
+            banda_superior_psi=r1(upper),
         ),
         baseline=Baseline(
             nombre="curva de caída promedio (entrenamiento)",
-            presion_psi=[round(float(v), 1) for v in base],
+            presion_psi=r1(base),
+        ),
+        bubble_point_psi=round(bubble_point(pvt), 1),
+        vrr=[round(float(v), 3) for v in feats["VRR_simple"]],
+        drivers=Drivers(
+            caudal_petroleo_bbl=r1(history["Caudal_Prod_Petroleo_bbl"]),
+            caudal_iny_agua_bbl=r1(history["Caudal_Iny_Agua_bbl"]),
         ),
         explainability=Explainability(
             features_construidos=FEATURE_DOCS,
@@ -126,8 +140,8 @@ async def predict(
             advertencias=warnings,
         ),
         model_info=ModelInfo(
-            version=model.MODEL_VERSION,
-            metricas_validacion=ValidationMetrics(**model.VALIDATION_METRICS),
-            nota=model.MODEL_NOTE,
+            version=predictor.version,
+            metricas_validacion=ValidationMetrics(**predictor.metrics),
+            nota=predictor.note,
         ),
     )

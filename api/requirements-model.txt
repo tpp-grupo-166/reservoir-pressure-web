@@ -1,0 +1,4 @@
+# Dependencias para entrenar y servir el modelo real (no hacen falta para el stub).
+# torch desde el índice CPU (la build por defecto de PyPI trae CUDA, ~2 GB).
+--index-url https://download.pytorch.org/whl/cpu
+torch==2.12.0

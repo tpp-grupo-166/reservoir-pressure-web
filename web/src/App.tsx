@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { PredictResponse } from "./types";
 import { Wizard } from "./components/Wizard";
 import { TrajectoryChart } from "./components/TrajectoryChart";
+import { VrrChart } from "./components/VrrChart";
+import { DriversChart } from "./components/DriversChart";
 import { ExplainPanel } from "./components/ExplainPanel";
 
 export default function App() {
@@ -18,7 +20,13 @@ export default function App() {
         <Wizard onResult={setResult} />
       ) : (
         <section className="result">
-          <TrajectoryChart prediction={result.prediction} baseline={result.baseline} />
+          <TrajectoryChart
+            prediction={result.prediction}
+            baseline={result.baseline}
+            bubblePoint={result.bubble_point_psi}
+          />
+          <VrrChart tiempoDias={result.prediction.tiempo_dias} vrr={result.vrr} />
+          <DriversChart tiempoDias={result.prediction.tiempo_dias} drivers={result.drivers} />
           <ExplainPanel explainability={result.explainability} modelInfo={result.model_info} />
           <button className="result__again" onClick={() => setResult(null)}>
             ← Nueva estimación

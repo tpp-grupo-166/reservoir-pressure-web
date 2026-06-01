@@ -143,6 +143,40 @@ El contrato es:
 > producir una presión por timestep. Mientras `build_features` y el contrato de entrada no
 > cambien, se puede intercambiar el modelo por detrás sin tocar nada más.
 
+### Entrenar y activar el modelo real
+
+El modelo del notebook 5 (LSTM + encoder de PVT) ya está implementado: la arquitectura en
+`api/net.py`, el entrenamiento en `api/train.py`, y la inferencia en `api/model.py`. La API
+**usa el stub hasta que exista el artefacto entrenado**; estos pasos lo generan y lo activan.
+
+Desde `api/` (con el venv activado):
+
+1. **Instalar torch** (no hace falta para el stub):
+   ```bash
+   pip install -r requirements-model.txt
+   ```
+2. **Entrenar y guardar el artefacto** (descarga Norne, entrena, evalúa y guarda
+   `artifacts/model.pt`; es idempotente, seed fija):
+   ```bash
+   python train.py
+   ```
+3. **Reiniciar la API** para que cargue el artefacto:
+   ```bash
+   make restart      # desde la raíz del repo
+   ```
+4. **Verificar** que está sirviendo el modelo real (no el stub):
+   ```bash
+   curl -s localhost:8000/api/model-info
+   ```
+   `version` debe pasar de `stub-v0` a `lstm-pvt-notebook5-v1`.
+
+El artefacto (`artifacts/*.pt`) está en `.gitignore`: no se commitea. Cada quien lo regenera
+con `python train.py`, o se distribuye por release / git-lfs.
+
+> **Nota:** este es el modelo más frágil según la auditoría (el transfer cross-reservoir
+> depende de la seed). Las métricas que expone `/api/model-info` son del test in-distribution
+> de Norne; tratá la estimación como preliminar.
+
 ## Pendiente
 
 - Enchufar el LSTM entrenado en `api/model.py` (hoy es un stub).
