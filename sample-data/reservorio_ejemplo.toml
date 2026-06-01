@@ -1,0 +1,10 @@
+# Propiedades estáticas del reservorio (constantes por campo).
+# Ejemplo: simulación 1 del campo Volve (dataset del notebook 5).
+# Subí este archivo en el paso 2 del wizard para autocompletar las propiedades.
+
+[reservorio]
+porosidad           = 0.239        # fracción (0–1)
+permeabilidad_mD    = 2353.78      # mD
+espesor_neto_m      = 77.75        # m
+area_m2             = 6796200.0    # m²
+presion_inicial_psi = 4773.49      # psi

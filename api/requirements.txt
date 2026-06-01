@@ -1,0 +1,8 @@
+fastapi==0.136.3
+uvicorn[standard]==0.48.0
+pydantic==2.13.4
+pandas==3.0.3
+numpy==2.4.6
+python-multipart==0.0.30
+# torch se agrega cuando se enchufe el modelo real (ver model.py)
+# torch==2.12.0
