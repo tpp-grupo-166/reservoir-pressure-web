@@ -4,9 +4,8 @@ Interfaz web + API para estimar la presión de un yacimiento de petróleo. El in
 sube la historia de producción y la tabla PVT de un campo y obtiene la trayectoria de
 presión estimada por el modelo de ML, con una explicación de cómo se procesaron sus datos.
 
-> **Estado:** esqueleto / MVP. El backend corre con un predictor stub (físicamente
-> plausible pero NO es el LSTM entrenado), para poder desarrollar el front contra una API
-> viva. Ver `api/model.py` para enchufar el modelo real.
+> **Estado:** MVP. Sirve el LSTM entrenado si el artefacto existe; si no, un stub de
+> desarrollo físicamente plausible (ver *El modelo*).
 
 ## Estructura
 
@@ -16,171 +15,100 @@ reservoir-pressure-web/
 └── api/   → backend FastAPI (validación + feature engineering + inferencia)
 ```
 
-`api/features.py` es la única fuente de verdad del feature engineering: el back lo usa para
-inferencia y cualquier script externo debería importar de ahí en vez de duplicarlo.
+Flujo stateless: el front manda los datos a la API, que valida, construye features
+(en `api/features.py`, única fuente de verdad) y predice con el modelo. Sin base de datos
+ni autenticación en esta etapa.
 
-## Arquitectura
+## Datos
 
-```
-Front (React/Vite)  ──HTTP/JSON──►  API (FastAPI)  ──►  Modelo ML (PyTorch)
-                                       │
-                                       └─ validación + feature engineering
-```
+El usuario aporta tres archivos; en `sample-data/` hay un caso real completo (simulación 1
+del campo Volve) para recorrer el wizard de punta a punta.
 
-Flujo stateless: subís datos → la API valida, construye features y predice → ves el
-resultado. Sin base de datos ni autenticación en esta etapa (ver *Pendiente*).
+- **Historia de producción** (CSV, una fila por timestep): `tiempo_dias`,
+  `Caudal_Prod_Petroleo_bbl`, `Caudal_Iny_Agua_bbl`, `Prod_Acumulada_Petroleo`,
+  `Prod_Acumulada_Gas`, `Prod_Acumulada_Agua`, `Iny_Acumulada_Agua`.
+- **Propiedades estáticas** (formulario o archivo TOML con tabla `[reservorio]`): porosidad,
+  permeabilidad, espesor neto, área y presión inicial.
+- **Tabla PVT** (CSV): `p_grid_psi`, `bo_rb_stb`, `bg_rb_scf`, `rs_scf_stb`.
 
-## Datos de entrada
-
-El usuario aporta tres cosas:
-
-**1. Historia de producción** (CSV, una fila por timestep):
-
-| Columna | Unidad | Descripción |
-|---|---|---|
-| `tiempo_dias` | días | tiempo desde inicio de producción |
-| `Caudal_Prod_Petroleo_bbl` | bbl/día | caudal de producción de petróleo |
-| `Caudal_Iny_Agua_bbl` | bbl/día | caudal de inyección de agua |
-| `Prod_Acumulada_Petroleo` | bbl | producción acumulada de petróleo |
-| `Prod_Acumulada_Gas` | scf | producción acumulada de gas |
-| `Prod_Acumulada_Agua` | bbl | producción acumulada de agua |
-| `Iny_Acumulada_Agua` | bbl | inyección acumulada de agua |
-
-**2. Propiedades estáticas del reservorio**: porosidad (0–1), permeabilidad (mD),
-espesor neto (m), área (m²) y presión inicial (psi). Se cargan en el formulario o
-subiendo un **archivo de config TOML** (tabla `[reservorio]`, ver ejemplo en `sample-data/`).
-
-**3. Tabla PVT** (CSV): curvas de laboratorio del fluido, columnas `p_grid_psi`,
-`bo_rb_stb`, `bg_rb_scf`, `rs_scf_stb`.
-
-La API valida columnas, tipos y rangos; registra cualquier limpieza/reemplazo y lo
-devuelve junto con la predicción para que el usuario entienda qué se hizo con sus datos.
-
-## Datos de ejemplo
-
-En `sample-data/` hay un caso de prueba real y coherente, extraído de la simulación 1 del
-campo **Volve** (dataset del notebook 5):
-
-- `produccion_ejemplo.csv` — historia de producción (425 timesteps).
-- `reservorio_ejemplo.toml` — propiedades estáticas del reservorio.
-- `pvt_ejemplo.csv` — tabla PVT de Volve.
-
-Sirven para recorrer el wizard de punta a punta (subir producción → cargar el TOML en el
-paso 2 → subir el PVT → estimar).
-
-## API
-
-| Método | Endpoint | Descripción |
-|---|---|---|
-| `POST` | `/api/predict` | recibe los datos y devuelve trayectoria + baseline + explicabilidad |
-| `POST` | `/api/validate` | valida la historia de producción sin predecir |
-| `GET`  | `/api/model-info` | versión y métricas de validación del modelo |
-| `GET`  | `/api/health` | healthcheck |
-
-Docs interactivas en `http://localhost:8000/docs`.
+La API valida columnas, tipos y rangos, y devuelve cualquier limpieza junto con la predicción.
 
 ## Desarrollo
 
-Requisitos: Python 3.11+ y Node 20.19+ (lo pide Vite 8). Desde la raíz del repo:
+Requisitos: Python 3.11+ y Node 20.19+. Desde la raíz del repo:
 
 ```bash
 make init      # instala dependencias de backend y frontend (una vez)
-make up        # levanta backend (:8000) y frontend (:5173) en segundo plano
+make up        # levanta backend (:8000) y frontend (:5173) en background
 make down      # baja ambos
 make restart   # reinicia ambos
-make logs      # sigue los logs de ambos procesos
-make help      # lista los targets
+make logs      # sigue los logs
 ```
 
-`make init` crea el virtualenv del backend e instala sus dependencias, y corre
-`npm install` en el frontend. Después, `make up` corre los dos procesos en background y
-guarda sus PIDs y logs en `.run/`.
+`make up` deja PIDs y logs en `.run/`. Tests del backend: `cd api && pytest -q`.
 
-`make up` corre los dos procesos en background y guarda sus PIDs y logs en `.run/`.
+## El modelo
 
-### Manual (sin Makefile)
+El modelo del notebook 5 (LSTM + encoder de PVT) ya está implementado: arquitectura en
+`api/net.py`, entrenamiento en `api/train.py`, inferencia en `api/model.py`. La API sirve
+el modelo real si existe el artefacto entrenado; si no (p. ej. un clone limpio, porque
+`artifacts/*.pt` está gitignored), cae a un stub físicamente plausible pero no entrenado.
+
+### Entrenar y activar
+
+Desde `api/` con el venv activado:
 
 ```bash
-cd api && .venv/bin/uvicorn main:app --reload --port 8000     # backend
-cd web && npm run dev                                          # frontend (proxea /api → :8000)
-# tests del backend: cd api && pytest -q
+pip install -r requirements-model.txt   # torch (no hace falta para el stub)
+python train.py                          # descarga Norne, entrena y guarda artifacts/model.pt
+make restart                             # (desde la raíz) recarga la API con el artefacto
 ```
 
-## Cómo cambiar el modelo
+Verificá con `curl -s localhost:8000/api/model-info`: `version` pasa de `stub-v0` a
+`lstm-pvt-notebook5-v1`.
 
-El modelo está aislado detrás de una sola clase: `api/model.py` → `Predictor`. Para
-reemplazar el stub por un modelo entrenado (o cambiar un modelo por otro) **solo se toca
-ese archivo**; los endpoints, la validación y el front no se modifican.
+> **Nota:** es el modelo más frágil según la auditoría (el transfer cross-reservoir depende
+> de la seed); las métricas que expone son del test in-distribution de Norne. Tratá la
+> estimación como preliminar.
 
-El contrato es:
+### Cambiar el modelo
 
-- **`Predictor.load(self)`** — se llama una vez al levantar la API. Acá se carga el artefacto
-  entrenado (pesos, scalers, lo que haga falta) y se deja en `self`.
-- **`Predictor.predict(self, history, static, pvt) -> np.ndarray`** — recibe la historia de
-  producción (DataFrame), las propiedades estáticas (dict) y la tabla PVT (DataFrame), y
-  devuelve un array de presiones en psi, una por timestep.
+El modelo está aislado en `api/model.py` → `Predictor`; reemplazarlo no toca endpoints,
+validación ni front. El contrato:
 
-### Pasos
+- **`load()`** — carga el artefacto (pesos + scalers) al levantar la API; si no existe, stub.
+- **`predict_band(history, static, pvt)`** — devuelve `(estimada, inf, sup)` en psi, una por
+  timestep.
+- **`baseline(history, static)`** — la curva de referencia (caída promedio del entrenamiento).
 
-1. **Entrenar y guardar el artefacto.** Guardar los pesos del modelo y los `StandardScaler`
-   (ajustados solo con datos de entrenamiento) en `api/artifacts/`. Ese directorio ya está
-   en `.gitignore`: los artefactos pesados se versionan aparte (git-lfs o release), no en el repo.
-2. **Mantener la paridad de features.** El modelo debe consumir exactamente las features que
-   produce `api/features.py` (`build_features`) — mismos nombres, fórmulas y orden con que
-   fue entrenado. Para cambiar las features, modificarlas en `features.py` y reentrenar; es la
-   única fuente de verdad del feature engineering.
-3. **Implementar `load` y `predict`** en `Predictor`, usando `build_features(...)` para armar
-   la entrada, aplicando los scalers cargados y devolviendo las presiones desnormalizadas.
-4. **Actualizar el baseline** (`mean_curve_baseline`) con la curva promedio real del
-   entrenamiento, en lugar de la recta placeholder actual.
-5. **Sumar las dependencias del modelo.** Descomentar `torch` en `requirements.txt` (o agregar
-   lo que use el modelo) y fijar la versión.
-6. **Actualizar los metadatos.** En `model.py`, `MODEL_VERSION`, `VALIDATION_METRICS` y
-   `MODEL_NOTE` se exponen en `GET /api/model-info`: dejarlos reflejando el modelo real
-   (idealmente métricas multi-seed, no de una sola corrida).
-
-> El predictor stub actual deja en claro la forma esperada de `predict`: tomar features,
-> producir una presión por timestep. Mientras `build_features` y el contrato de entrada no
-> cambien, se puede intercambiar el modelo por detrás sin tocar nada más.
-
-### Entrenar y activar el modelo real
-
-El modelo del notebook 5 (LSTM + encoder de PVT) ya está implementado: la arquitectura en
-`api/net.py`, el entrenamiento en `api/train.py`, y la inferencia en `api/model.py`. La API
-**usa el stub hasta que exista el artefacto entrenado**; estos pasos lo generan y lo activan.
-
-Desde `api/` (con el venv activado):
-
-1. **Instalar torch** (no hace falta para el stub):
-   ```bash
-   pip install -r requirements-model.txt
-   ```
-2. **Entrenar y guardar el artefacto** (descarga Norne, entrena, evalúa y guarda
-   `artifacts/model.pt`; es idempotente, seed fija):
-   ```bash
-   python train.py
-   ```
-3. **Reiniciar la API** para que cargue el artefacto:
-   ```bash
-   make restart      # desde la raíz del repo
-   ```
-4. **Verificar** que está sirviendo el modelo real (no el stub):
-   ```bash
-   curl -s localhost:8000/api/model-info
-   ```
-   `version` debe pasar de `stub-v0` a `lstm-pvt-notebook5-v1`.
-
-El artefacto (`artifacts/*.pt`) está en `.gitignore`: no se commitea. Cada quien lo regenera
-con `python train.py`, o se distribuye por release / git-lfs.
-
-> **Nota:** este es el modelo más frágil según la auditoría (el transfer cross-reservoir
-> depende de la seed). Las métricas que expone `/api/model-info` son del test in-distribution
-> de Norne; tratá la estimación como preliminar.
+El modelo debe consumir las features de `api/features.py` (`build_features`) con los mismos
+nombres y orden con que fue entrenado; para cambiarlas, editar ahí y reentrenar.
 
 ## Pendiente
 
-- Enchufar el LSTM entrenado en `api/model.py` (hoy es un stub).
+- Versionar/distribuir el artefacto entrenado (`artifacts/model.pt`): hoy cada quien lo
+  regenera con `python train.py`. Falta el canal de release (git-lfs o adjunto) para no
+  depender del entrenamiento local.
 - Validar/avisar mejor cuando el rango de la tabla PVT no cubre las presiones de operación
   (la interpolación al grid del modelo ya está en `build_pvt_vector`).
-- Autenticación (JWT), persistencia (PostgreSQL), historial de consultas, comparación
-  contra métodos físicos (PTA/EBM) y escenarios pre-cargados.
+- Persistencia (PostgreSQL)
+  - Sumar Postgres al `docker-compose.yml` + capa de acceso (SQLAlchemy + tabla
+    `predictions`).
+  - Guardar cada predicción (inputs, outputs, versión del modelo, timestamp) al
+    resolver `/api/predict`.
+- Historial de consultas
+  - `GET /api/history` paginado.
+  - Vista de historial en el front: lista de consultas previas + reabrir un resultado.
+- Autenticación (JWT)
+  - Backend: registro/login con hash de password (passlib) y emisión de JWT; dependency
+    `current_user` para proteger los endpoints.
+  - Front: formulario de login, guardar el token y mandarlo en cada request; redirigir
+    si expira.
+  - Asociar el historial al usuario (FK en `predictions`) y filtrar por dueño.
+- Curva de presión por física (no-ML), para contrastar con el modelo
+  - Backend (`api/physics.py`): calcular una segunda trayectoria con balance de materiales
+    —el principio de que la presión cae cuando se produce más fluido del que se repone— y
+    sumarla a la respuesta de `/api/predict`.
+  - Front: dibujarla en `TrajectoryChart` junto a la curva del ML. Sirve de chequeo de
+    cordura (si se separan mucho, desconfiar del modelo) y le da credibilidad a la
+    herramienta frente a un ingeniero, que confía en el balance de materiales.
