@@ -1,9 +1,11 @@
 import {
-  Area, CartesianGrid, ComposedChart, Legend, Line, ReferenceLine,
+  Area, CartesianGrid, ComposedChart, Legend, Line, ReferenceArea, ReferenceLine,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import type { Baseline, Prediction } from "../types";
 import { TOOLTIP_PROPS } from "./chartTheme";
+import { useBoxZoom } from "./useBoxZoom";
+import { ZoomControls } from "./ZoomControls";
 
 interface Props {
   prediction: Prediction;
@@ -13,6 +15,7 @@ interface Props {
 
 /** Presión estimada vs tiempo, con banda de incertidumbre, baseline y punto de burbuja. */
 export function TrajectoryChart({ prediction, baseline, bubblePoint }: Props) {
+  const zoom = useBoxZoom();
   const data = prediction.tiempo_dias.map((t, i) => ({
     t,
     estimada: prediction.presion_estimada_psi[i],
@@ -42,14 +45,23 @@ export function TrajectoryChart({ prediction, baseline, bubblePoint }: Props) {
             </span>
           </span>
         </span>
+        <ZoomControls zoom={zoom} />
       </div>
       <ResponsiveContainer width="100%" height={380}>
-        <ComposedChart data={data} margin={{ top: 8, right: 24, bottom: 36, left: 24 }}>
+        <ComposedChart
+          data={data}
+          margin={{ top: 8, right: 24, bottom: 36, left: 24 }}
+          onMouseDown={zoom.onMouseDown}
+          onMouseMove={zoom.onMouseMove}
+          onMouseUp={zoom.onMouseUp}
+          onDoubleClick={zoom.reset}
+        >
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis
             dataKey="t"
             type="number"
-            domain={[0, "dataMax"]}
+            domain={zoom.domain}
+            allowDataOverflow
             allowDecimals={false}
             tickFormatter={(v) => `${Math.round(v)}`}
             label={{ value: "tiempo (días)", position: "insideBottom", offset: -10, dy: 12 }}
@@ -63,6 +75,9 @@ export function TrajectoryChart({ prediction, baseline, bubblePoint }: Props) {
           {bubblePoint != null && (
             <ReferenceLine y={bubblePoint} stroke="#e8833a" strokeDasharray="4 4"
               label={{ value: `Pb ${bubblePoint.toFixed(0)} psi`, position: "insideTopRight", fill: "#e8833a", fontSize: 11 }} />
+          )}
+          {zoom.refLeft !== null && zoom.refRight !== null && (
+            <ReferenceArea x1={zoom.refLeft} x2={zoom.refRight} fill="#1f77b4" fillOpacity={0.2} />
           )}
         </ComposedChart>
       </ResponsiveContainer>

@@ -116,6 +116,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .result__again { margin-top: 24px; background: transparent; border: 1px solid var(--border); }
 
 .chart { margin-bottom: 32px; }
+.chart .recharts-wrapper { user-select: none; cursor: crosshair; }
 .chart__header {
   display: flex;
   align-items: center;
@@ -123,6 +124,22 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   margin-bottom: 8px;
 }
 .chart__title { font-weight: 600; }
+
+.chart__hint {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+.chart__reset {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink);
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  border-radius: 6px;
+}
+.chart__reset:hover { border-color: var(--accent); }
 
 .info {
   position: relative;

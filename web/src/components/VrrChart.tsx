@@ -1,7 +1,10 @@
 import {
-  CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
+  CartesianGrid, Line, LineChart, ReferenceArea, ReferenceLine,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { TOOLTIP_PROPS } from "./chartTheme";
+import { useBoxZoom } from "./useBoxZoom";
+import { ZoomControls } from "./ZoomControls";
 
 interface Props {
   tiempoDias: number[];
@@ -10,6 +13,7 @@ interface Props {
 
 /** Voidage Replacement Ratio en el tiempo: explica POR QUÉ sube o baja la presión. */
 export function VrrChart({ tiempoDias, vrr }: Props) {
+  const zoom = useBoxZoom();
   const data = tiempoDias.map((t, i) => ({ t, vrr: vrr[i] }));
 
   return (
@@ -24,14 +28,23 @@ export function VrrChart({ tiempoDias, vrr }: Props) {
             <span><strong>VRR &lt; 1</strong>: se saca más de lo que se repone → la presión cae.</span>
           </span>
         </span>
+        <ZoomControls zoom={zoom} />
       </div>
       <ResponsiveContainer width="100%" height={240}>
-        <LineChart data={data} margin={{ top: 8, right: 24, bottom: 36, left: 24 }}>
+        <LineChart
+          data={data}
+          margin={{ top: 8, right: 24, bottom: 36, left: 24 }}
+          onMouseDown={zoom.onMouseDown}
+          onMouseMove={zoom.onMouseMove}
+          onMouseUp={zoom.onMouseUp}
+          onDoubleClick={zoom.reset}
+        >
           <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
           <XAxis
             dataKey="t"
             type="number"
-            domain={[0, "dataMax"]}
+            domain={zoom.domain}
+            allowDataOverflow
             allowDecimals={false}
             tickFormatter={(v) => `${Math.round(v)}`}
             label={{ value: "tiempo (días)", position: "insideBottom", offset: -10, dy: 12 }}
@@ -41,6 +54,9 @@ export function VrrChart({ tiempoDias, vrr }: Props) {
           <ReferenceLine y={1} stroke="#888" strokeDasharray="4 4"
             label={{ value: "equilibrio (1.0)", position: "insideTopRight", fill: "#888", fontSize: 11 }} />
           <Line type="monotone" dataKey="vrr" name="VRR" stroke="#2ca02c" dot={false} strokeWidth={2} />
+          {zoom.refLeft !== null && zoom.refRight !== null && (
+            <ReferenceArea x1={zoom.refLeft} x2={zoom.refRight} fill="#2ca02c" fillOpacity={0.2} />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>
