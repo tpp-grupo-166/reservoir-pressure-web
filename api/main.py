@@ -13,14 +13,18 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 import model
+from routes.users import router as users_router
 from features import FEATURE_DOCS, bubble_point, build_features
-from schemas import (
+from schemas.prediction_schemas import (
     Baseline, Drivers, Explainability, ModelInfo, Prediction, PredictResponse,
     StaticProps, ValidateResponse, ValidationMetrics,
 )
 from validation import ValidationError, read_csv, validate_history, validate_pvt
 
 app = FastAPI(title="Reservoir Pressure Estimator API", version="0.1.0")
+
+# Include auth router
+app.include_router(users_router)
 
 # En desarrollo el front corre en :5173 (Vite). Ajustar en producción.
 app.add_middleware(

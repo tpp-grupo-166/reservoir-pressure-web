@@ -4,5 +4,8 @@ pydantic==2.13.4
 pandas==3.0.3
 numpy==2.4.6
 python-multipart==0.0.30
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==3.2.2
 # torch se agrega cuando se enchufe el modelo real (ver model.py)
 # torch==2.12.0

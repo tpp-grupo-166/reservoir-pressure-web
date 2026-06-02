@@ -5,7 +5,7 @@ API_PORT := 8000
 WEB_PORT := 5173
 PYTHON   := python3
 
-.PHONY: help init up down restart logs
+.PHONY: help init up down restart logs test
 
 help: ## Muestra esta ayuda
 	@echo "Targets disponibles:"
@@ -31,3 +31,6 @@ restart: down up ## Reinicia ambos
 
 logs: ## Sigue los logs de ambos procesos
 	@tail -f $(RUN_DIR)/backend.log $(RUN_DIR)/frontend.log
+
+test: ## Corre los tests del backend
+	cd $(API_DIR) && PYTHONPATH=. .venv/bin/pytest -q
