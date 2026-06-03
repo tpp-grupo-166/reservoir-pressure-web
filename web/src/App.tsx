@@ -1,19 +1,39 @@
 import { useState } from "react";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import type { PredictResponse } from "./types";
 import { Wizard } from "./components/Wizard";
 import { TrajectoryChart } from "./components/TrajectoryChart";
 import { VrrChart } from "./components/VrrChart";
 import { DriversChart } from "./components/DriversChart";
 import { ExplainPanel } from "./components/ExplainPanel";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { Login } from "./pages/Login";
+import { Register } from "./pages/Register";
+import { useAuth } from "./hooks/useAuth";
 
-export default function App() {
+function Dashboard() {
   const [result, setResult] = useState<PredictResponse | null>(null);
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="app">
       <header className="app__header">
-        <h1>Estimador de presión de reservorio</h1>
-        <p>Cargá la historia de producción y la tabla PVT para estimar la trayectoria de presión.</p>
+        <div className="header-content">
+          <div>
+            <h1>Estimador de presión de reservorio</h1>
+            <p>Cargá la historia de producción y la tabla PVT para estimar la trayectoria de presión.</p>
+          </div>
+          <div className="user-info">
+            <span>{user?.email}</span>
+            <button onClick={handleLogout} className="logout-button">Cerrar sesión</button>
+          </div>
+        </div>
       </header>
 
       {!result ? (
@@ -34,5 +54,24 @@ export default function App() {
         </section>
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </BrowserRouter>
   );
 }

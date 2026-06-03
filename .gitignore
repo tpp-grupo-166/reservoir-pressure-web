@@ -24,3 +24,6 @@ api/artifacts/*.pkl
 .idea/
 .vscode/
 *.swp
+
+# Environment variables
+.env
