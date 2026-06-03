@@ -2,6 +2,7 @@
 from typing import List, Optional
 
 from domain.user import User
+from domain.errors import EmailAlreadyExistsError
 
 
 # In-memory user store
@@ -15,7 +16,7 @@ class UserService:
     def save(user: User) -> User:
         """Save a user instance to the in-memory store."""
         if UserService.find_by_email(user.email):
-            raise ValueError("User already exists")
+            raise EmailAlreadyExistsError()
         users.append(user)
         return user
 

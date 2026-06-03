@@ -321,6 +321,18 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   box-shadow: 0 0 0 1px #0d676a;
 }
 .auth-field__input:disabled { opacity: 0.6; cursor: not-allowed; }
+.auth-field__input--error {
+  border-color: #dc2626;
+}
+.auth-field__input--error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px #dc2626;
+}
+.auth-field__error {
+  font-size: 0.75rem;
+  color: #dc2626;
+  margin-top: 4px;
+}
 
 /* Wrapper del input de password con botón ojo */
 .auth-field__password-wrapper {

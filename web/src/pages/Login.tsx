@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { AuthLayout } from '../components/AuthLayout';
 import { PasswordInput } from '../components/PasswordInput';
+import { validateLogin, type ValidationError } from '../utils/validation';
 
 export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -20,13 +22,27 @@ export function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+
+    // Client-side validation
+    const validation = validateLogin(email, password);
+    if (!validation.isValid) {
+      const errors: Record<string, string> = {};
+      validation.errors.forEach((err: ValidationError) => {
+        errors[err.field] = err.message;
+      });
+      setFieldErrors(errors);
+      return;
+    }
+
     setLoading(true);
 
     try {
       await login(email, password);
       navigate('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
+      // Show generic error message for security
+      setError('Email o contraseña incorrectos');
     } finally {
       setLoading(false);
     }
@@ -50,10 +66,10 @@ export function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="name@company.com"
-            required
             disabled={loading}
-            className="auth-field__input"
+            className={`auth-field__input ${fieldErrors.email ? 'auth-field__input--error' : ''}`}
           />
+          {fieldErrors.email && <div className="auth-field__error">{fieldErrors.email}</div>}
         </div>
 
         {/* Campo: CONTRASEÑA con toggle */}
@@ -64,12 +80,13 @@ export function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            required
             disabled={loading}
+            className={fieldErrors.password ? 'auth-field__input--error' : ''}
           />
+          {fieldErrors.password && <div className="auth-field__error">{fieldErrors.password}</div>}
         </div>
 
-        {/* Error */}
+        {/* General Error */}
         {error && <div className="auth-error">{error}</div>}
 
         {/* Submit */}

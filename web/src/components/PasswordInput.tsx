@@ -7,6 +7,7 @@ interface PasswordInputProps {
   placeholder?: string;
   disabled?: boolean;
   required?: boolean;
+  className?: string;
 }
 
 export function PasswordInput({
@@ -16,6 +17,7 @@ export function PasswordInput({
   placeholder = '••••••••',
   disabled = false,
   required = false,
+  className = '',
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -29,7 +31,7 @@ export function PasswordInput({
         placeholder={placeholder}
         disabled={disabled}
         required={required}
-        className="auth-field__input"
+        className={`auth-field__input ${className}`}
       />
       <button
         type="button"

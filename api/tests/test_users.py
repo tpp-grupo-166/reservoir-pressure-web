@@ -27,13 +27,13 @@ def test_register_duplicate_user():
         json={"email": "duplicate@example.com", "password": "password123"}
     )
     
-    # Second registration with same email should fail
+    # Second registration with same email should fail with 409
     response = client.post(
         "/api/users",
         json={"email": "duplicate@example.com", "password": "password123"}
     )
-    assert response.status_code == 400
-    assert "already exists" in response.json()["detail"].lower()
+    assert response.status_code == 409
+    assert response.json()["detail"] == "El email ya está en uso"
 
 
 def test_login_valid_credentials():
@@ -62,7 +62,7 @@ def test_login_invalid_email():
         json={"email": "nonexistent@example.com", "password": "password123"}
     )
     assert response.status_code == 401
-    assert "incorrect" in response.json()["detail"].lower()
+    assert response.json()["detail"] == "Email o contraseña incorrectos"
 
 
 def test_login_invalid_password():
@@ -79,7 +79,7 @@ def test_login_invalid_password():
         json={"email": "wrongpass@example.com", "password": "wrongpassword"}
     )
     assert response.status_code == 401
-    assert "incorrect" in response.json()["detail"].lower()
+    assert response.json()["detail"] == "Email o contraseña incorrectos"
 
 
 def test_get_all_users():
@@ -142,3 +142,84 @@ def test_get_current_user_with_invalid_token():
         headers={"Authorization": "Bearer invalid_token"}
     )
     assert response.status_code == 401
+
+
+def test_register_invalid_email_format():
+    """Test registering with invalid email format."""
+    response = client.post(
+        "/api/users",
+        json={"email": "invalidemail", "password": "password123"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "El formato del email no es válido"
+
+
+def test_register_invalid_email_no_at():
+    """Test registering with email without @."""
+    response = client.post(
+        "/api/users",
+        json={"email": "usermail.com", "password": "password123"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "El formato del email no es válido"
+
+
+def test_register_invalid_email_no_domain():
+    """Test registering with email without domain."""
+    response = client.post(
+        "/api/users",
+        json={"email": "user@", "password": "password123"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "El formato del email no es válido"
+
+
+def test_register_password_too_short():
+    """Test registering with password shorter than 8 characters."""
+    response = client.post(
+        "/api/users",
+        json={"email": "short@example.com", "password": "abc"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "La contraseña debe tener al menos 8 caracteres e incluir letras y números"
+
+
+def test_register_password_no_complexity():
+    """Test registering with password without letters and numbers."""
+    response = client.post(
+        "/api/users",
+        json={"email": "nocomplex@example.com", "password": "12345678"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "La contraseña debe tener al menos 8 caracteres e incluir letras y números"
+
+
+def test_login_invalid_email_format():
+    """Test login with invalid email format."""
+    response = client.post(
+        "/api/auth/token",
+        json={"email": "invalidemail", "password": "password123"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "El formato del email no es válido"
+
+
+def test_login_empty_email():
+    """Test login with empty email."""
+    response = client.post(
+        "/api/auth/token",
+        json={"email": "", "password": "password123"}
+    )
+    assert response.status_code == 400
+    assert response.json()["detail"] == "El formato del email no es válido"
+
+
+def test_login_invalid_credentials_error_message():
+    """Test that invalid credentials returns correct error message."""
+    response = client.post(
+        "/api/auth/token",
+        json={"email": "nonexistent@example.com", "password": "wrongpassword"}
+    )
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Email o contraseña incorrectos"
+
