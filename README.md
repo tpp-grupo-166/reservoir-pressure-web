@@ -43,6 +43,7 @@ make up        # levanta backend (:8000) y frontend (:5173) en background
 make down      # baja ambos
 make restart   # reinicia ambos
 make logs      # sigue los logs
+make test      # ejecuta tests del backend
 ```
 
 `make up` deja PIDs y logs en `.run/`. Tests del backend: `cd api && pytest -q`.
@@ -93,18 +94,17 @@ nombres y orden con que fue entrenado; para cambiarlas, editar ahí y reentrenar
   (la interpolación al grid del modelo ya está en `build_pvt_vector`).
 - Persistencia (PostgreSQL)
   - Sumar Postgres al `docker-compose.yml` + capa de acceso (SQLAlchemy + tabla
-    `predictions`).
+    `predictions` + tabla `users`).
+  - Crear los modelos de SQLAlchemy para `Prediction` y `User`.
+  - Crear los servicios de SQLAlchemy para `PredictionService` y `UserService`.
   - Guardar cada predicción (inputs, outputs, versión del modelo, timestamp) al
     resolver `/api/predict`.
+  - Asociar el historial al usuario (FK en `predictions`) y filtrar por dueño.
 - Historial de consultas
   - `GET /api/history` paginado.
   - Vista de historial en el front: lista de consultas previas + reabrir un resultado.
-- Autenticación (JWT)
-  - Backend: registro/login con hash de password (passlib) y emisión de JWT; dependency
-    `current_user` para proteger los endpoints.
-  - Front: formulario de login, guardar el token y mandarlo en cada request; redirigir
-    si expira.
-  - Asociar el historial al usuario (FK en `predictions`) y filtrar por dueño.
+- Dashboard de predicciones
+  - Migrar la página del dashboard para que siga el diseño de las páginas de login y register.
 - Curva de presión por física (no-ML), para contrastar con el modelo
   - Backend (`api/physics.py`): calcular una segunda trayectoria con balance de materiales
     —el principio de que la presión cae cuando se produce más fluido del que se repone— y
