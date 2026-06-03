@@ -31,7 +31,7 @@ function Dashboard() {
           </div>
           <div className="user-info">
             <span>{user?.email}</span>
-            <button onClick={handleLogout} className="logout-button">Logout</button>
+            <button onClick={handleLogout} className="logout-button">Cerrar sesión</button>
           </div>
         </div>
       </header>

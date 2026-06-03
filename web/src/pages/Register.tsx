@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { AuthLayout } from '../components/AuthLayout';
+import { PasswordInput } from '../components/PasswordInput';
 
 export function Register() {
   const [email, setEmail] = useState('');
@@ -31,41 +33,53 @@ export function Register() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-container">
-        <h1>Register</h1>
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
-          </div>
-          {error && <div className="error-message">{error}</div>}
-          <button type="submit" disabled={loading} className="auth-button">
-            {loading ? 'Loading...' : 'Register'}
-          </button>
-        </form>
-        <p className="auth-link">
-          Already have an account? <Link to="/login">Login</Link>
-        </p>
-      </div>
-    </div>
+    <AuthLayout
+      pageTitle="Crear una cuenta"
+      pageSubtitle="Únete para analizar datos y generar predicciones."
+      footerText="¿Ya tienes una cuenta?"
+      footerLinkLabel="INICIAR SESIÓN"
+      footerLinkTo="/login"
+    >
+      <form onSubmit={handleSubmit} className="auth-form">
+        {/* Campo: CORREO ELECTRÓNICO */}
+        <div className="auth-field">
+          <label htmlFor="email" className="auth-field__label">CORREO ELECTRÓNICO</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@company.com"
+            required
+            disabled={loading}
+            className="auth-field__input"
+          />
+        </div>
+
+        {/* Campo: CONTRASEÑA con toggle */}
+        <div className="auth-field">
+          <label htmlFor="password" className="auth-field__label">CONTRASEÑA</label>
+          <PasswordInput
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            disabled={loading}
+          />
+        </div>
+
+        {/* Error */}
+        {error && <div className="auth-error">{error}</div>}
+
+        {/* Submit */}
+        <button type="submit" disabled={loading} className="auth-submit-btn">
+          <span>{loading ? 'CREANDO CUENTA…' : 'CREAR CUENTA'}</span>
+          <svg fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        </button>
+      </form>
+    </AuthLayout>
   );
 }
