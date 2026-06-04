@@ -80,6 +80,7 @@ body {
   transition: border-color 0.15s, color 0.15s;
 }
 .filedrop--active { border-color: var(--accent); color: var(--ink); }
+.filedrop__summary { margin: 8px 0 0; font-size: 0.82rem; color: var(--muted); }
 
 .field {
   display: flex;
