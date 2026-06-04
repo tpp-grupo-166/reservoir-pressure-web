@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { ThemeToggle } from './ThemeToggle';
 
 interface AuthLayoutProps {
   pageTitle: string;
@@ -20,6 +21,7 @@ export function AuthLayout({
 }: AuthLayoutProps) {
   return (
     <div className="auth-page">
+      <ThemeToggle className="theme-toggle--floating" />
       <main className="auth-card">
         <header className="auth-card__header">
           <div className="auth-card__logo">
