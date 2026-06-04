@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import type { PredictResponse } from "./types";
 import { Wizard } from "./components/Wizard";
 import { TrajectoryChart } from "./components/TrajectoryChart";
@@ -71,6 +71,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        {/* `/` y cualquier ruta desconocida → dashboard (el ProtectedRoute rebota a /login si no hay sesión). */}
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );
