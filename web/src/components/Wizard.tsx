@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PredictResponse, StaticProps } from "../types";
 import { predict } from "../api/client";
+import { EXAMPLE_STATIC, exampleFiles } from "../exampleData";
 import { FileDrop } from "./FileDrop";
 
 const DEFAULT_STATIC: StaticProps = {
@@ -48,6 +49,17 @@ export function Wizard({ onResult }: Props) {
     }
   }
 
+  /** Carga el caso de ejemplo (Volve) en los tres pasos y salta al último. */
+  function loadExample() {
+    const { history: h, pvt: p } = exampleFiles();
+    setHistory(h);
+    setPvt(p);
+    setTomlFile(null);
+    setStaticProps(EXAMPLE_STATIC);
+    setError(null);
+    setStep(2);
+  }
+
   return (
     <div className="wizard">
       <ol className="wizard__steps">
@@ -60,6 +72,11 @@ export function Wizard({ onResult }: Props) {
         <section>
           <h3>Historia de producción (CSV)</h3>
           <FileDrop label="el CSV de producción" file={history} onSelect={setHistory} />
+          <p className="wizard__example">
+            <button className="linkish" onClick={loadExample}>
+              Cargar caso de ejemplo
+            </button>
+          </p>
           <div className="wizard__nav">
             <button disabled={!history} onClick={() => setStep(1)}>Siguiente →</button>
           </div>
