@@ -22,7 +22,8 @@ ni autenticación en esta etapa.
 ## Datos
 
 El usuario aporta tres archivos; en `sample-data/` hay un caso real completo (simulación 1
-del campo Volve) para recorrer el wizard de punta a punta.
+del campo Volve). Para probarlo sin datos propios, el primer paso del wizard tiene un botón
+**"Cargar caso de ejemplo"** que carga ese caso en los tres pasos, listo para estimar.
 
 - **Historia de producción** (CSV, una fila por timestep): `tiempo_dias`,
   `Caudal_Prod_Petroleo_bbl`, `Caudal_Iny_Agua_bbl`, `Prod_Acumulada_Petroleo`,

@@ -9,5 +9,7 @@ export default defineConfig({
     proxy: {
       "/api": "http://localhost:8000",
     },
+    // Permite importar los CSV de `sample-data/` (fuera de `web/`) vía `?raw`.
+    fs: { allow: [".."] },
   },
 });
