@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Estimador de presión de reservorio</title>
+    <script>
+      // Aplica el tema guardado antes del primer paint (evita parpadeo).
+      document.documentElement.dataset.theme =
+        localStorage.getItem("theme") === "light" ? "light" : "dark";
+    </script>
   </head>
   <body>
     <div id="root"></div>

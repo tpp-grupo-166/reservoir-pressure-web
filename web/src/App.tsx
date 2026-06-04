@@ -10,6 +10,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { useAuth } from "./hooks/useAuth";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 function Dashboard() {
   const [result, setResult] = useState<PredictResponse | null>(null);
@@ -30,6 +31,7 @@ function Dashboard() {
             <p>Cargá la historia de producción y la tabla PVT para estimar la trayectoria de presión.</p>
           </div>
           <div className="user-info">
+            <ThemeToggle />
             <span>{user?.email}</span>
             <button onClick={handleLogout} className="logout-button">Cerrar sesión</button>
           </div>
