@@ -4,8 +4,6 @@ from typing import Optional
 import uuid
 import re
 
-from core.security import verify_password
-
 from domain.errors import (
     InvalidEmailError,
     InvalidPasswordError,
@@ -25,10 +23,6 @@ class User:
     def create(cls, email: str, hashed_password: str) -> "User":
         """Create a new User instance with generated UUID."""
         return cls(id=str(uuid.uuid4()), email=email, password=hashed_password)
-
-    def verify_password(self, plain_password: str) -> bool:
-        """Verify if the plain password matches the hashed password."""
-        return verify_password(plain_password, self.password)
 
     @staticmethod
     def validate_email(email: str) -> None:
