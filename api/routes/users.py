@@ -18,14 +18,19 @@ from schemas.user_register_schema import UserRegister
 from schemas.user_response_schema import UserResponse
 from schemas.token_schema import Token
 
-from repositories.user_service import UserService
+from sqlalchemy.orm import Session
+from infrastructure.db.data_source import get_db
+from repositories.user_repository import UserRepository
 from core.security import ACCESS_TOKEN_EXPIRE_MINUTES, create_access_token, decode_access_token, get_password_hash, verify_password
 
 router = APIRouter(prefix="/api")
 security = HTTPBearer()
 
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+) -> User:
     """Dependency to get the current authenticated user from JWT token."""
     token = credentials.credentials
     payload = decode_access_token(token)
@@ -38,7 +43,8 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     email = payload.get("sub")
-    user = UserService.find_by_email(email)
+    repo = UserRepository(db)
+    user = repo.find_by_email(email)
     
     if not user:
         raise UserNotFoundError()
@@ -47,7 +53,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 
 @router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserRegister) -> UserResponse:
+async def register(user_data: UserRegister, db: Session = Depends(get_db)) -> UserResponse:
     """Register a new user."""
     try:
         # Domain validation
@@ -56,7 +62,8 @@ async def register(user_data: UserRegister) -> UserResponse:
         
         hashed_password = get_password_hash(user_data.password)
         user = User.create(user_data.email, hashed_password)
-        UserService.save(user)
+        repo = UserRepository(db)
+        repo.save(user)
         return UserResponse(id=user.id, email=user.email)
     except InvalidEmailError as e:
         raise HTTPException(
@@ -76,13 +83,14 @@ async def register(user_data: UserRegister) -> UserResponse:
 
 
 @router.post("/auth/token", response_model=Token)
-async def login(user_data: UserLogin) -> Token:
+async def login(user_data: UserLogin, db: Session = Depends(get_db)) -> Token:
     """Login and return JWT token."""
     try:
         # Domain validation for login fields
         User.validate_email(user_data.email)
         
-        user = UserService.find_by_email(user_data.email)
+        repo = UserRepository(db)
+        user = repo.find_by_email(user_data.email)
         
         if not user or not verify_password(user_data.password, user.password):
             raise InvalidCredentialsError()
@@ -120,7 +128,8 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)) 
 
 
 @router.get("/users", response_model=list[UserResponse])
-async def get_all_users() -> list[UserResponse]:
+async def get_all_users(db: Session = Depends(get_db)) -> list[UserResponse]:
     """Get all users."""
-    users = UserService.get_all()
+    repo = UserRepository(db)
+    users = repo.get_all()
     return [UserResponse(id=user.id, email=user.email) for user in users]
