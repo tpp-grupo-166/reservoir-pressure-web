@@ -32,11 +32,8 @@ export function FileDrop({ label, accept = ".csv", file, onSelect }: Props) {
 
   return (
     <div
-      className={`filedrop ${dragging ? "filedrop--active" : ""}`}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragging(true);
-      }}
+      className={`filedrop-new ${dragging ? 'filedrop-new--active' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => {
         e.preventDefault();
@@ -46,18 +43,36 @@ export function FileDrop({ label, accept = ".csv", file, onSelect }: Props) {
       }}
       onClick={() => inputRef.current?.click()}
     >
-      <input
-        ref={inputRef}
-        type="file"
-        accept={accept}
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onSelect(f);
-        }}
-      />
-      <p>{file ? `✓ ${file.name}` : `Arrastrá ${label} o hacé clic para elegir`}</p>
-      {file && summary && <p className="filedrop__summary">{summary}</p>}
+      <input ref={inputRef} type="file" accept={accept} hidden
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onSelect(f); }} />
+
+      {file ? (
+        <>
+          <div className="filedrop-new__icon">
+            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
+              task
+            </span>
+          </div>
+          <p className="filedrop-new__selected">✓ {file.name}</p>
+          {summary && <p className="filedrop-new__summary">{summary}</p>}
+        </>
+      ) : (
+        <>
+          <div className="filedrop-new__icon">
+            <span className="material-symbols-outlined">upload_file</span>
+          </div>
+          <p className="filedrop-new__title">Arrastrá {label} (opcional) o hacé clic para elegir</p>
+          <p className="filedrop-new__subtitle">{accept === '.toml' ? 'Formatos soportados: .toml' : 'Formatos soportados: .csv'}</p>
+          <button
+            type="button"
+            className="filedrop-new__btn"
+            onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>folder_open</span>
+            Explorar archivos
+          </button>
+        </>
+      )}
     </div>
   );
 }

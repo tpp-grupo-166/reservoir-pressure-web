@@ -26,7 +26,7 @@ export function TrajectoryChart({ prediction, baseline, bubblePoint }: Props) {
   return (
     <div className="chart">
       <div className="chart__header">
-        <span className="chart__title">Presión estimada vs tiempo</span>
+        <span className="chart__title">Presión estimada vs Tiempo</span>
         <span className="info" tabIndex={0} role="button" aria-label="Qué significan las líneas">
           i
           <span className="info__tip" role="tooltip">
