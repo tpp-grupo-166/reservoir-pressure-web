@@ -127,11 +127,11 @@ nombres y orden con que fue entrenado; para cambiarlas, editar ahí y reentrenar
 
 ## Pendiente
 
+- API y endpoint de predicción
+  - Migrar todo el endpoint de predicción y todas sus dependencias a la nueva estructura de la API.
 - Versionar/distribuir el artefacto entrenado (`artifacts/model.pt`): hoy cada quien lo
   regenera con `python train.py`. Falta el canal de release (git-lfs o adjunto) para no
   depender del entrenamiento local.
-- Validar/avisar mejor cuando el rango de la tabla PVT no cubre las presiones de operación
-  (la interpolación al grid del modelo ya está en `build_pvt_vector`).
 - Persistencia de predicciones (PostgreSQL)
   - Crear modelo de SQLAlchemy para `Prediction`.
   - Guardar cada predicción (inputs, outputs, versión del modelo, timestamp) al
@@ -140,8 +140,8 @@ nombres y orden con que fue entrenado; para cambiarlas, editar ahí y reentrenar
 - Historial de consultas
   - `GET /api/history` paginado.
   - Vista de historial en el front: lista de consultas previas + reabrir un resultado.
-- Dashboard de predicciones
-  - Migrar la página del dashboard para que siga el diseño de las páginas de login y register.
+- Validar/avisar mejor cuando el rango de la tabla PVT no cubre las presiones de operación
+  (la interpolación al grid del modelo ya está en `build_pvt_vector`).
 - Curva de presión por física (no-ML), para contrastar con el modelo
   - Backend (`api/physics.py`): calcular una segunda trayectoria con balance de materiales
     —el principio de que la presión cae cuando se produce más fluido del que se repone— y
