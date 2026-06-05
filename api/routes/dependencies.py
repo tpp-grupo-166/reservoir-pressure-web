@@ -1,6 +1,6 @@
 """FastAPI dependency that wires the System with its concrete implementations."""
 from fastapi import Depends
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth.security import Security
 from domain.system import System
@@ -12,7 +12,7 @@ def get_security() -> Security:
     return Security()
 
 
-def get_user_repository(db: Session = Depends(get_db)) -> UserRepository:
+def get_user_repository(db: AsyncSession = Depends(get_db)) -> UserRepository:
     return UserRepository(db)
 
 

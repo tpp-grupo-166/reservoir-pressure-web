@@ -9,7 +9,8 @@ passlib[bcrypt]==1.7.4
 bcrypt==3.2.2
 sqlalchemy==2.0.41
 alembic==1.16.1
-psycopg2-binary==2.9.10
+psycopg2-binary==2.9.10 # driver síncrono solo para Alembic
+asyncpg==0.30.0 # driver async para la app
 python-dotenv==1.1.1
 # torch se agrega cuando se enchufe el modelo real (ver model.py)
 # torch==2.12.0
