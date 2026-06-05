@@ -49,6 +49,45 @@ make test      # ejecuta tests del backend
 
 `make up` deja PIDs y logs en `.run/`. Tests del backend: `cd api && pytest -q`.
 
+## Base de datos
+
+La aplicación usa PostgreSQL para persistencia de usuarios. Las migraciones se gestionan con Alembic.
+
+```bash
+make up-docker  # levanta la base de datos PostgreSQL en Docker
+```
+
+### Migraciones
+
+Desde el directorio `api/`:
+
+```bash
+# Crear una nueva migración (detecta cambios en los modelos)
+.venv/bin/alembic revision --autogenerate -m "descripcion_del_cambio"
+
+# Aplicar todas las migraciones pendientes
+.venv/bin/alembic upgrade head
+
+# Ver el estado de las migraciones
+.venv/bin/alembic current
+.venv/bin/alembic history
+```
+
+Las migraciones se aplican automáticamente al ejecutar `make up`.
+
+### Acceso directo a PostgreSQL
+
+```bash
+PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d reservoir_db
+```
+
+Comandos útiles en psql:
+```sql
+\d                    # listar todas las tablas
+\d users              # describir la tabla users
+SELECT * FROM users;  # ver todos los usuarios
+```
+
 ## El modelo
 
 El modelo del notebook 5 (LSTM + encoder de PVT) ya está implementado: arquitectura en
@@ -93,11 +132,8 @@ nombres y orden con que fue entrenado; para cambiarlas, editar ahí y reentrenar
   depender del entrenamiento local.
 - Validar/avisar mejor cuando el rango de la tabla PVT no cubre las presiones de operación
   (la interpolación al grid del modelo ya está en `build_pvt_vector`).
-- Persistencia (PostgreSQL)
-  - Sumar Postgres al `docker-compose.yml` + capa de acceso (SQLAlchemy + tabla
-    `predictions` + tabla `users`).
-  - Crear los modelos de SQLAlchemy para `Prediction` y `User`.
-  - Crear los servicios de SQLAlchemy para `PredictionService` y `UserService`.
+- Persistencia de predicciones (PostgreSQL)
+  - Crear modelo de SQLAlchemy para `Prediction`.
   - Guardar cada predicción (inputs, outputs, versión del modelo, timestamp) al
     resolver `/api/predict`.
   - Asociar el historial al usuario (FK en `predictions`) y filtrar por dueño.
