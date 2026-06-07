@@ -7,6 +7,21 @@ import { TOOLTIP_PROPS } from "./chartTheme";
 import { useBoxZoom } from "./useBoxZoom";
 import { ZoomControls } from "./ZoomControls";
 
+const CustomLegend = ({ payload }: any) => (
+  <div style={{ display: "flex", justifyContent: "center", gap: "16px" }}>
+    {payload.map((entry: any, index: number) => (
+      <div key={index} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <svg width={16} height={16} viewBox="0 0 16 16">
+          <line x1="0" y1="8" x2="5" y2="8" stroke={entry.color} strokeWidth={2} />
+          <line x1="11" y1="8" x2="16" y2="8" stroke={entry.color} strokeWidth={2} />
+          <circle cx="8" cy="8" r="3" fill="none" stroke={entry.color} strokeWidth={2} />
+        </svg>
+        <span style={{ color: "var(--ink)", fontSize: "14px", fontWeight: 500 }}>{entry.value}</span>
+      </div>
+    ))}
+  </div>
+);
+
 interface Props {
   tiempoDias: number[];
   drivers: Drivers;
@@ -59,9 +74,9 @@ export function DriversChart({ tiempoDias, drivers }: Props) {
             domain={["auto", "auto"]}
           />
           <Tooltip {...TOOLTIP_PROPS} formatter={(v) => (typeof v === "number" ? `${v.toFixed(0)} bbl/día` : String(v))} />
-          <Legend verticalAlign="top" wrapperStyle={{ paddingBottom: 12 }} />
-          <Line type="monotone" dataKey="petroleo" name="petróleo producido" stroke="#1f77b4" dot={false} strokeWidth={2} />
-          <Line type="monotone" dataKey="inyeccion" name="agua inyectada" stroke="#17a2b8" dot={false} strokeWidth={2} />
+          <Legend verticalAlign="top" wrapperStyle={{ paddingBottom: 12 }} content={<CustomLegend />} />
+          <Line type="monotone" dataKey="petroleo" name="petróleo producido" stroke="#2ca02c" dot={false} strokeWidth={2} />
+          <Line type="monotone" dataKey="inyeccion" name="agua inyectada" stroke="#c32b1bdc" dot={false} strokeWidth={2} />
           {zoom.refLeft !== null && zoom.refRight !== null && (
             <ReferenceArea x1={zoom.refLeft} x2={zoom.refRight} fill="#17a2b8" fillOpacity={0.2} />
           )}
