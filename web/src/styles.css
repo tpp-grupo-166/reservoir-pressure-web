@@ -904,3 +904,99 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
 .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* CSV Preview Table */
+.csv-preview {
+  margin-top: 24px;
+}
+.csv-preview__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.csv-preview__title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.csv-preview__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.csv-preview__label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.csv-preview__input {
+  width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  outline: none;
+}
+.csv-preview__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.csv-preview__scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: 300px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+.csv-preview__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.csv-preview__table th {
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 600;
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.csv-preview__table td {
+  padding: 8px 12px;
+  color: var(--ink);
+  border-bottom: 1px solid var(--border);
+}
+.csv-preview__table tbody tr:last-child td {
+  border-bottom: none;
+}
+.csv-preview__table tbody tr:hover {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.csv-preview__loading {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 16px;
+}
+.csv-preview__error {
+  font-size: 12px;
+  color: var(--danger);
+  margin-top: 16px;
+}
