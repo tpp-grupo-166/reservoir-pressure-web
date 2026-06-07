@@ -27,7 +27,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Run tests
-        run: pytest -q
+        run: pytest -q --cov=. --cov-report=term-missing --cov-fail-under=75
 
   frontend:
     name: Frontend (build)
