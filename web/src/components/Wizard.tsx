@@ -4,6 +4,7 @@ import { predict } from "../api/client";
 import { EXAMPLE_STATIC, exampleFiles } from "../exampleData";
 import { FileDrop } from "./FileDrop";
 import { StepIndicator } from "./StepIndicator";
+import { CsvPreviewTable } from "./CsvPreviewTable";
 
 const DEFAULT_STATIC: StaticProps = {
   porosidad: 0.24,
@@ -89,6 +90,7 @@ export function Wizard({ onResult, onStepChange }: Props) {
               file={history}
               onSelect={(f) => { setHistory(f); setExampleLoaded(false); }}
             />
+            <CsvPreviewTable file={history} />
             <p className="wizard__example">
               <button className="linkish" onClick={loadExample}>
                 Cargar caso de ejemplo
@@ -191,6 +193,7 @@ export function Wizard({ onResult, onStepChange }: Props) {
               file={pvt}
               onSelect={(f) => { setPvt(f); setExampleLoaded(false); }}
             />
+            <CsvPreviewTable file={pvt} />
             {error && <p className="error" style={{ marginTop: '16px' }}>⚠ {error}</p>}
             <div className="wizard-nav">
               <button className="btn-back" onClick={() => handleStepChange(1)}>Atrás</button>
