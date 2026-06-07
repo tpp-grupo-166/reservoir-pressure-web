@@ -1,5 +1,7 @@
 # reservoir-pressure-web
 
+[![CI](https://github.com/maximopalopoli/reservoir-pressure-web/actions/workflows/ci.yml/badge.svg)](https://github.com/maximopalopoli/reservoir-pressure-web/actions/workflows/ci.yml)
+
 Interfaz web + API para estimar la presión de un yacimiento de petróleo. El ingeniero
 sube la historia de producción y la tabla PVT de un campo y obtiene la trayectoria de
 presión estimada por el modelo de ML, con una explicación de cómo se procesaron sus datos.
