@@ -1,10 +1,12 @@
-import { useState } from "react";
-import type { PredictResponse, StaticProps } from "../types";
-import { predict } from "../api/client";
+import { useEffect, useState } from "react";
+import type { PredictResponse, StaticProps, ValidateResponse } from "../types";
+import { predict, validateInput } from "../api/client";
+import { validateStaticProps } from "../utils/validation";
 import { EXAMPLE_STATIC, exampleFiles } from "../exampleData";
 import { FileDrop } from "./FileDrop";
 import { StepIndicator } from "./StepIndicator";
 import { CsvPreviewTable } from "./CsvPreviewTable";
+import { ValidationFeedback } from "./ValidationFeedback";
 
 const DEFAULT_STATIC: StaticProps = {
   porosidad: 0.24,
@@ -43,6 +45,61 @@ export function Wizard({ onResult, onStepChange }: Props) {
   const [error, setError] = useState<string | null>(null);
   // True mientras los datos cargados sean los del caso de ejemplo (sin tocar a mano).
   const [exampleLoaded, setExampleLoaded] = useState(false);
+
+  // Validación temprana por paso (el backend es la única fuente de verdad de las
+  // reglas de los CSV; el formulario se valida en el cliente por ser un input de UI).
+  const [historyVal, setHistoryVal] = useState<ValidateResponse | null>(null);
+  const [historyValidating, setHistoryValidating] = useState(false);
+  const [pvtVal, setPvtVal] = useState<ValidateResponse | null>(null);
+  const [pvtValidating, setPvtValidating] = useState(false);
+
+  const staticErrors = tomlFile ? [] : validateStaticProps(staticProps);
+  const staticErrorByField = Object.fromEntries(
+    staticErrors.map((e) => [e.field, e.message]),
+  );
+
+  // Valida la historia de producción cada vez que cambia el archivo.
+  useEffect(() => {
+    if (!history) { setHistoryVal(null); return; }
+    let cancelled = false;
+    setHistoryValidating(true);
+    validateInput({ history })
+      .then((r) => { if (!cancelled) setHistoryVal(r); })
+      .catch((e) => {
+        if (!cancelled) {
+          setHistoryVal({
+            ok: false, n_filas: 0, columnas_detectadas: [], advertencias: [],
+            errores: [e instanceof Error ? e.message : String(e)],
+          });
+        }
+      })
+      .finally(() => { if (!cancelled) setHistoryValidating(false); });
+    return () => { cancelled = true; };
+  }, [history]);
+
+  // Valida la PVT cuando cambia el archivo o la presión inicial (habilita el aviso de rango).
+  // En modo TOML no conocemos la presión inicial en el front → sólo se chequean columnas.
+  useEffect(() => {
+    if (!pvt) { setPvtVal(null); return; }
+    let cancelled = false;
+    setPvtValidating(true);
+    const presionInicialPsi = tomlFile ? undefined : staticProps.presion_inicial_psi;
+    validateInput({ pvt, presionInicialPsi })
+      .then((r) => { if (!cancelled) setPvtVal(r); })
+      .catch((e) => {
+        if (!cancelled) {
+          setPvtVal({
+            ok: false, n_filas: 0, columnas_detectadas: [], advertencias: [],
+            errores: [e instanceof Error ? e.message : String(e)],
+          });
+        }
+      })
+      .finally(() => { if (!cancelled) setPvtValidating(false); });
+    return () => { cancelled = true; };
+  }, [pvt, tomlFile, staticProps.presion_inicial_psi]);
+
+  const historyBlocked = historyValidating || (historyVal != null && !historyVal.ok);
+  const pvtBlocked = pvtValidating || (pvtVal != null && !pvtVal.ok);
 
   async function run() {
     if (!history || !pvt) return;
@@ -90,6 +147,7 @@ export function Wizard({ onResult, onStepChange }: Props) {
               file={history}
               onSelect={(f) => { setHistory(f); setExampleLoaded(false); }}
             />
+            <ValidationFeedback result={historyVal} validating={historyValidating} />
             <CsvPreviewTable file={history} />
             <p className="wizard__example">
               <button className="linkish" onClick={loadExample}>
@@ -97,7 +155,7 @@ export function Wizard({ onResult, onStepChange }: Props) {
               </button>
             </p>
             <div className="wizard-nav wizard-nav--end">
-              <button className="btn-primary" disabled={!history} onClick={() => handleStepChange(1)}>
+              <button className="btn-primary" disabled={!history || historyBlocked} onClick={() => handleStepChange(1)}>
                 Siguiente
                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_forward</span>
               </button>
@@ -142,13 +200,16 @@ export function Wizard({ onResult, onStepChange }: Props) {
                       <input
                         id={f.key}
                         type="number"
-                        className="form-field__input"
+                        className={`form-field__input${staticErrorByField[f.key] ? " form-field__input--error" : ""}`}
                         value={staticProps[f.key]}
                         onChange={(e) => {
                           setStaticProps({ ...staticProps, [f.key]: Number(e.target.value) });
                           setExampleLoaded(false);
                         }}
                       />
+                      {staticErrorByField[f.key] && (
+                        <p className="form-field__error">{staticErrorByField[f.key]}</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -160,20 +221,23 @@ export function Wizard({ onResult, onStepChange }: Props) {
                   <input
                     id="presion_inicial_psi"
                     type="number"
-                    className="form-field__input"
+                    className={`form-field__input${staticErrorByField.presion_inicial_psi ? " form-field__input--error" : ""}`}
                     value={staticProps.presion_inicial_psi}
                     onChange={(e) => {
                       setStaticProps({ ...staticProps, presion_inicial_psi: Number(e.target.value) });
                       setExampleLoaded(false);
                     }}
                   />
+                  {staticErrorByField.presion_inicial_psi && (
+                    <p className="form-field__error">{staticErrorByField.presion_inicial_psi}</p>
+                  )}
                 </div>
               </>
             )}
 
             <div className="wizard-nav">
               <button className="btn-back" onClick={() => handleStepChange(0)}>Atrás</button>
-              <button className="btn-primary" onClick={() => handleStepChange(2)}>
+              <button className="btn-primary" disabled={staticErrors.length > 0} onClick={() => handleStepChange(2)}>
                 Siguiente
                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_forward</span>
               </button>
@@ -193,11 +257,12 @@ export function Wizard({ onResult, onStepChange }: Props) {
               file={pvt}
               onSelect={(f) => { setPvt(f); setExampleLoaded(false); }}
             />
+            <ValidationFeedback result={pvtVal} validating={pvtValidating} />
             <CsvPreviewTable file={pvt} />
             {error && <p className="error" style={{ marginTop: '16px' }}>⚠ {error}</p>}
             <div className="wizard-nav">
               <button className="btn-back" onClick={() => handleStepChange(1)}>Atrás</button>
-              <button className="btn-primary" disabled={!pvt || loading} onClick={run}>
+              <button className="btn-primary" disabled={!pvt || loading || pvtBlocked} onClick={run}>
                 {loading ? 'Estimando…' : 'Estimar presión'}
                 {!loading && (
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_forward</span>

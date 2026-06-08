@@ -18,9 +18,22 @@ export async function getModelInfo(): Promise<ModelInfo> {
   return res.json();
 }
 
-export async function validateHistory(historyCsv: File): Promise<ValidateResponse> {
+/**
+ * Valida la historia y/o la tabla PVT antes de predecir (feedback por paso del wizard).
+ * Se manda sólo el archivo del paso actual; la presión inicial habilita el aviso de
+ * rango de la PVT.
+ */
+export async function validateInput(opts: {
+  history?: File;
+  pvt?: File;
+  presionInicialPsi?: number;
+}): Promise<ValidateResponse> {
   const form = new FormData();
-  form.append("history_csv", historyCsv);
+  if (opts.history) form.append("history_csv", opts.history);
+  if (opts.pvt) form.append("pvt_csv", opts.pvt);
+  if (opts.presionInicialPsi != null) {
+    form.append("presion_inicial_psi", String(opts.presionInicialPsi));
+  }
   const res = await fetch("/api/validate", { method: "POST", body: form });
   if (!res.ok) return asError(res);
   return res.json();

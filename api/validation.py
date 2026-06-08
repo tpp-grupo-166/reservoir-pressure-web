@@ -59,16 +59,19 @@ def validate_history(df: pd.DataFrame) -> tuple[list[str], list[dict]]:
     return warnings, cleaning
 
 
-def validate_pvt(df: pd.DataFrame, p_init: float) -> list[str]:
+def validate_pvt(df: pd.DataFrame, p_init: float | None = None) -> list[str]:
+    """Valida la tabla PVT. El chequeo de columnas es siempre; el aviso de rango
+    sólo se emite si se conoce la presión inicial (en el wizard puede faltar)."""
     missing = [c for c in REQUIRED_PVT_COLUMNS if c not in df.columns]
     if missing:
         raise ValidationError(f"Faltan columnas en la tabla PVT: {missing}")
 
     warnings: list[str] = []
-    lo, hi = df["p_grid_psi"].min(), df["p_grid_psi"].max()
-    if not (lo <= p_init <= hi):
-        warnings.append(
-            f"La tabla PVT cubre {lo:.0f}–{hi:.0f} psi pero la presión inicial es "
-            f"{p_init:.0f} psi: se extrapoló (revisar el rango de la tabla)."
-        )
+    if p_init is not None:
+        lo, hi = df["p_grid_psi"].min(), df["p_grid_psi"].max()
+        if not (lo <= p_init <= hi):
+            warnings.append(
+                f"La tabla PVT cubre {lo:.0f}–{hi:.0f} psi pero la presión inicial es "
+                f"{p_init:.0f} psi: se extrapoló (revisar el rango de la tabla)."
+            )
     return warnings
