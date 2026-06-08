@@ -74,6 +74,39 @@ def test_unsorted_input_no_false_cumulative_warning():
     assert not any("decrecientes" in w for w in warns)
 
 
+def test_validate_pvt_ok_and_range_warning():
+    """El wizard valida la PVT por separado: columnas OK y aviso de rango vs presión inicial."""
+    # Sin presión inicial: sólo chequea columnas → OK, sin advertencias.
+    resp = client.post("/api/validate",
+                       files={"pvt_csv": ("pvt.csv", _pvt_csv(), "text/csv")})
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["ok"] is True
+    assert resp.json()["advertencias"] == []
+
+    # Con presión inicial fuera del rango de la tabla (1500–5500) → advierte extrapolación.
+    resp = client.post("/api/validate",
+                       files={"pvt_csv": ("pvt.csv", _pvt_csv(), "text/csv")},
+                       data={"presion_inicial_psi": 9000})
+    assert resp.json()["ok"] is True
+    assert any("extrapol" in w for w in resp.json()["advertencias"])
+
+
+def test_validate_pvt_missing_column():
+    """PVT sin una columna requerida → ok=False con el error que bloquea el paso."""
+    bad = pd.read_csv(__import__("io").BytesIO(_pvt_csv())).drop(columns=["rs_scf_stb"])
+    resp = client.post("/api/validate",
+                       files={"pvt_csv": ("pvt.csv", bad.to_csv(index=False).encode(), "text/csv")})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["ok"] is False
+    assert body["errores"]
+
+
+def test_validate_no_files():
+    """Sin ningún archivo → 422."""
+    assert client.post("/api/validate").status_code == 422
+
+
 def test_predict_with_toml():
     """Las propiedades del reservorio se pueden pasar como archivo TOML."""
     toml = b"""
