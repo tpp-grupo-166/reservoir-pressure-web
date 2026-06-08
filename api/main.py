@@ -51,17 +51,41 @@ def model_info() -> ModelInfo:
 
 
 @app.post("/api/validate", response_model=ValidateResponse)
-async def validate(history_csv: UploadFile = File(...)) -> ValidateResponse:
-    """Valida la historia de producción sin predecir (feedback temprano del wizard)."""
-    df = read_csv(await history_csv.read())
+async def validate(
+    history_csv: UploadFile | None = File(None),
+    pvt_csv: UploadFile | None = File(None),
+    presion_inicial_psi: float | None = Form(None),
+) -> ValidateResponse:
+    """Valida la historia de producción y/o la tabla PVT sin predecir.
+
+    Da feedback temprano por paso del wizard: se manda el archivo del paso actual
+    y se reporta si está OK, con sus advertencias o el error que lo bloquea.
+    """
+    if history_csv is None and pvt_csv is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Enviá al menos un archivo a validar (history_csv o pvt_csv).",
+        )
+
+    warnings: list[str] = []
+    columnas: list[str] = []
+    n_filas = 0
     try:
-        warnings, _ = validate_history(df)
+        if history_csv is not None:
+            df = read_csv(await history_csv.read())
+            n_filas, columnas = len(df), list(df.columns)
+            warnings += validate_history(df)[0]
+        if pvt_csv is not None:
+            df = read_csv(await pvt_csv.read())
+            if history_csv is None:
+                n_filas, columnas = len(df), list(df.columns)
+            warnings += validate_pvt(df, presion_inicial_psi)
     except ValidationError as exc:
-        return ValidateResponse(ok=False, n_filas=len(df),
-                                columnas_detectadas=list(df.columns),
+        return ValidateResponse(ok=False, n_filas=n_filas,
+                                columnas_detectadas=columnas,
                                 advertencias=[], errores=[str(exc)])
-    return ValidateResponse(ok=True, n_filas=len(df),
-                            columnas_detectadas=list(df.columns),
+    return ValidateResponse(ok=True, n_filas=n_filas,
+                            columnas_detectadas=columnas,
                             advertencias=warnings, errores=[])
 
 
