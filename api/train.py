@@ -25,8 +25,11 @@ from features import (DYNAMIC_COLUMNS, PRESSURE_SCALE, STATIC_COLUMNS,
                       build_features, build_pvt_vector)
 from net import LSTMPVT
 
-BASE = "https://raw.githubusercontent.com/ricomateo/opm-proof-of-concept/main/datasets"
-NORNE_URL = f"{BASE}/dataset_norne.csv"
+# Repo del equipo. El dataset sale de `consistentes/`: la PVT de `datasets/` (y del
+# upstream ricomateo/opm-proof-of-concept) fue editada después de simular y quedó
+# inconsistente con las presiones (ver datasets/consistentes/README.md).
+BASE = "https://raw.githubusercontent.com/tpp-grupo-166/opm-datasets/main/datasets"
+NORNE_URL = f"{BASE}/consistentes/dataset_norne.csv"
 PVT_NORNE_URL = f"{BASE}/pvt_norne.csv"
 TARGET = "Presion_Reservorio_psi"
 ARTIFACT = Path(__file__).parent / "artifacts" / "model.pt"
@@ -41,12 +44,14 @@ def _read_url(url: str) -> pd.DataFrame:
 
 
 def _static_from_raw(sim_df: pd.DataFrame) -> dict:
+    # P_init = primera presión de la sim (los CSV consistentes no traen la columna
+    # `Presion_Inicial_Reservorio_psi`; en los editados era exactamente este valor).
     r = sim_df.iloc[0]
     return dict(porosidad=float(r["Porosidad"]),
                 permeabilidad_mD=float(r["Permeabilidad_mD"]),
                 espesor_neto_m=float(r["Espesor_Neto_m"]),
                 area_m2=float(r["Area"]),
-                presion_inicial_psi=float(r["Presion_Inicial_Reservorio_psi"]))
+                presion_inicial_psi=float(r["Presion_Reservorio_psi"]))
 
 
 def _prepare(raw: pd.DataFrame, pvt: pd.DataFrame, sim_ids: list[int], min_len: int):
