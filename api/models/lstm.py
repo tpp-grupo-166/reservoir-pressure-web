@@ -15,8 +15,6 @@ toma de `features.py` (la misma fuente que usa la API → paridad train/serving 
 """
 from __future__ import annotations
 
-import io
-import urllib.request
 from pathlib import Path
 
 import numpy as np
@@ -24,24 +22,17 @@ import pandas as pd
 
 from features import (DYNAMIC_COLUMNS, PRESSURE_SCALE, STATIC_COLUMNS,
                       build_features, build_pvt_vector)
-from models.base import Model
+from models.base import Model, baseline_from_curve
+from models.datasets import (NORNE_URL, PVT_NORNE_URL, TARGET, TEST_SIMS,
+                             TRAIN_SIMS, read_url, static_from_raw)
 
 ARTIFACT = Path(__file__).parent.parent / "artifacts" / "lstm.pt"
 # nombre que usaba el artefacto antes del registry; se sigue leyendo para no
 # degradar al stub un checkout que ya tenía el modelo entrenado
 LEGACY_ARTIFACT = ARTIFACT.with_name("model.pt")
 
-# Repo del equipo. El dataset sale de `consistentes/`: la PVT de `datasets/` (y del
-# upstream ricomateo/opm-proof-of-concept) fue editada después de simular y quedó
-# inconsistente con las presiones (ver datasets/consistentes/README.md).
-BASE = "https://raw.githubusercontent.com/tpp-grupo-166/opm-datasets/main/datasets"
-NORNE_URL = f"{BASE}/consistentes/dataset_norne.csv"
-PVT_NORNE_URL = f"{BASE}/pvt_norne.csv"
-TARGET = "Presion_Reservorio_psi"
-
 N_EPOCHS, LR, WEIGHT_DECAY = 30, 1e-3, 1e-3
 SEEDS = [0, 1, 2, 7, 42]   # ensemble: la dispersión entre seeds da la banda de incertidumbre
-TRAIN_SIMS, TEST_SIMS = list(range(1, 25)), list(range(25, 31))
 
 
 class LSTMModel(Model):
@@ -101,17 +92,14 @@ class LSTMModel(Model):
         return preds.mean(axis=0), preds.min(axis=0), preds.max(axis=0)
 
     def baseline(self, history: pd.DataFrame, static: dict) -> np.ndarray:
-        # interpola/recorta la curva de caída promedio del train al largo del input
-        p_init = static["presion_inicial_psi"]
-        src = self._mean_delta
-        idx = np.linspace(0, len(src) - 1, len(history))
-        return p_init + np.interp(idx, np.arange(len(src)), src)
+        return baseline_from_curve(static["presion_inicial_psi"], self._mean_delta,
+                                   len(history))
 
     def train(self) -> None:
         import torch
 
-        norne = _read_url(NORNE_URL)
-        pvt = _read_url(PVT_NORNE_URL)
+        norne = read_url(NORNE_URL)
+        pvt = read_url(PVT_NORNE_URL)
         min_len = int(norne.groupby("sim_id").size().min())
         print(f"Norne: {norne.sim_id.nunique()} sims, truncado a {min_len} timesteps")
 
@@ -171,28 +159,13 @@ class LSTMModel(Model):
         print(f"artefacto guardado en {ARTIFACT}")
 
 
-def _read_url(url: str) -> pd.DataFrame:
-    return pd.read_csv(io.BytesIO(urllib.request.urlopen(url).read()))
-
-
-def _static_from_raw(sim_df: pd.DataFrame) -> dict:
-    # P_init = primera presión de la sim (los CSV consistentes no traen la columna
-    # `Presion_Inicial_Reservorio_psi`; en los editados era exactamente este valor).
-    r = sim_df.iloc[0]
-    return dict(porosidad=float(r["Porosidad"]),
-                permeabilidad_mD=float(r["Permeabilidad_mD"]),
-                espesor_neto_m=float(r["Espesor_Neto_m"]),
-                area_m2=float(r["Area"]),
-                presion_inicial_psi=float(r["Presion_Reservorio_psi"]))
-
-
 def _prepare(raw: pd.DataFrame, pvt: pd.DataFrame, sim_ids: list[int], min_len: int):
     """Apila las sims en tensores RAW (dynamic, static, pvt, P_init) + el target y."""
     dyn, stat, pinit, ys = [], [], [], []
     pvt_vec = build_pvt_vector(pvt)
     for sid in sim_ids:
         sim = raw[raw.sim_id == sid].sort_values("tiempo_dias").head(min_len)
-        static = _static_from_raw(sim)
+        static = static_from_raw(sim)
         feats = build_features(sim, static, pvt)
         dyn.append(feats[DYNAMIC_COLUMNS].to_numpy())
         stat.append(feats[STATIC_COLUMNS].iloc[0].to_numpy())

@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import model
+import models.ridge
 from models.registry import available, get_model
 from models.stub import StubModel
 
@@ -46,7 +47,20 @@ def fresh_predictor():
 def test_registry_resolves_by_name():
     assert isinstance(get_model("stub"), StubModel)
     assert get_model("inexistente") is None
-    assert {"stub", "lstm"} <= set(available())
+    assert {"stub", "lstm", "ridge"} <= set(available())
+
+
+@pytest.mark.skipif(not models.ridge.ARTIFACT.exists(),
+                    reason="sin artefacto ridge (correr train.py --model ridge)")
+def test_ridge_contract():
+    ridge = get_model("ridge")
+    assert ridge.load() is True
+    n = 50
+    pred, lower, upper = ridge.predict_band(_history(n), STATIC, _pvt())
+    base = ridge.baseline(_history(n), STATIC)
+    assert len(pred) == len(lower) == len(upper) == len(base) == n
+    assert (lower <= pred).all() and (pred <= upper).all()
+    assert ridge.version.startswith("ridge-")
 
 
 def test_stub_contract():

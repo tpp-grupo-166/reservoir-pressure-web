@@ -49,3 +49,13 @@ class Model(ABC):
         Default: no entrenable. Los modelos con artefacto lo sobreescriben.
         """
         raise NotImplementedError(f"el modelo '{self.name}' no se entrena")
+
+
+def baseline_from_curve(p_init: float, mean_delta: np.ndarray, n: int) -> np.ndarray:
+    """Interpola/recorta la curva de caída promedio del train al largo del input.
+
+    El baseline estándar de los modelos entrenados: cada artefacto guarda su
+    `mean_delta_curve` y la ancla al P_init del usuario.
+    """
+    idx = np.linspace(0, len(mean_delta) - 1, n)
+    return p_init + np.interp(idx, np.arange(len(mean_delta)), mean_delta)
