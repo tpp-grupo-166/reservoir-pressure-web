@@ -42,3 +42,10 @@ class Model(ABC):
     @abstractmethod
     def baseline(self, history: pd.DataFrame, static: dict) -> np.ndarray:
         """Curva de referencia anclada al P_init del input."""
+
+    def train(self) -> None:
+        """Entrena el modelo y guarda su artefacto en `artifacts/` (CLI: train.py).
+
+        Default: no entrenable. Los modelos con artefacto lo sobreescriben.
+        """
+        raise NotImplementedError(f"el modelo '{self.name}' no se entrena")

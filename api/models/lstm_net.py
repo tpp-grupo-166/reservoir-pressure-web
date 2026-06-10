@@ -1,8 +1,10 @@
 """Arquitectura del modelo (LSTM + encoder de PVT, del notebook 5).
 
-Definición pura de la red: la usan `train.py` (entrenamiento) y `model.py` (inferencia),
-para que haya una sola fuente de la arquitectura. El feature engineering vive en
-`features.py`; el escalado y el loop de entrenamiento viven afuera de esta clase.
+Definición pura de la red, única fuente de la arquitectura. Vive separada de
+`models/lstm.py` porque definir un `nn.Module` requiere torch en el import: el adapter
+la importa lazy (recién al cargar/entrenar) para que la API bootee sin torch instalado.
+El feature engineering vive en `features.py`; el escalado y el loop de entrenamiento
+viven afuera de esta clase.
 """
 from __future__ import annotations
 
