@@ -3,8 +3,10 @@ from __future__ import annotations
 
 from models.base import Model
 from models.lstm import LSTMModel
+from models.pinn import PINNModel
 from models.ridge import RidgeModel
 from models.stub import StubModel
+from models.xgboost import XGBoostModel
 
 _MODELS: dict[str, type[Model]] = {}
 
@@ -28,3 +30,5 @@ def available() -> list[str]:
 register(StubModel)
 register(LSTMModel)
 register(RidgeModel)
+register(XGBoostModel)
+register(PINNModel)

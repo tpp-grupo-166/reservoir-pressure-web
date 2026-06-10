@@ -6,7 +6,9 @@ import pandas as pd
 import pytest
 
 import model
+import models.pinn
 import models.ridge
+import models.xgboost
 from models.registry import available, get_model
 from models.stub import StubModel
 
@@ -47,20 +49,26 @@ def fresh_predictor():
 def test_registry_resolves_by_name():
     assert isinstance(get_model("stub"), StubModel)
     assert get_model("inexistente") is None
-    assert {"stub", "lstm", "ridge"} <= set(available())
+    assert {"stub", "lstm", "ridge", "xgboost", "pinn"} <= set(available())
 
 
-@pytest.mark.skipif(not models.ridge.ARTIFACT.exists(),
-                    reason="sin artefacto ridge (correr train.py --model ridge)")
-def test_ridge_contract():
-    ridge = get_model("ridge")
-    assert ridge.load() is True
+def _artifact(name):
+    return {"ridge": models.ridge.ARTIFACT, "xgboost": models.xgboost.ARTIFACT,
+            "pinn": models.pinn.ARTIFACT}[name]
+
+
+@pytest.mark.parametrize("name", ["ridge", "xgboost", "pinn"])
+def test_trained_model_contract(name):
+    if not _artifact(name).exists():
+        pytest.skip(f"sin artefacto {name} (correr train.py --model {name})")
+    m = get_model(name)
+    assert m.load() is True
     n = 50
-    pred, lower, upper = ridge.predict_band(_history(n), STATIC, _pvt())
-    base = ridge.baseline(_history(n), STATIC)
+    pred, lower, upper = m.predict_band(_history(n), STATIC, _pvt())
+    base = m.baseline(_history(n), STATIC)
     assert len(pred) == len(lower) == len(upper) == len(base) == n
-    assert (lower <= pred).all() and (pred <= upper).all()
-    assert ridge.version.startswith("ridge-")
+    assert (lower <= pred + 1e-6).all() and (pred <= upper + 1e-6).all()
+    assert m.version.startswith(name)
 
 
 def test_stub_contract():
