@@ -57,10 +57,17 @@ def _artifact(name):
             "pinn": models.pinn.ARTIFACT}[name]
 
 
+# deps opcionales (requirements-model.txt) que cada contrato necesita para cargar
+CONTRACT_DEPS = {"ridge": ("joblib", "sklearn"), "xgboost": ("joblib", "xgboost"),
+                 "pinn": ("torch",)}
+
+
 @pytest.mark.parametrize("name", ["ridge", "xgboost", "pinn"])
 def test_trained_model_contract(name):
     if not _artifact(name).exists():
         pytest.skip(f"sin artefacto {name} (correr train.py --model {name})")
+    for dep in CONTRACT_DEPS[name]:
+        pytest.importorskip(dep, reason=f"sin {dep} (instalar requirements-model.txt)")
     m = get_model(name)
     assert m.load() is True
     n = 50
