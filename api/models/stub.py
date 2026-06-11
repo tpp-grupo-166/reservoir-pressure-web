@@ -18,9 +18,9 @@ class StubModel(Model):
     def __init__(self) -> None:
         self.version = "stub-v0"
         self.metrics = dict(R2_medio=0.0, R2_std=0.0, MAE_psi=0.0)
-        self.note = ("STUB de desarrollo: no es el modelo entrenado. Devuelve una trayectoria "
-                     "derivada de un voidage de superficie crudo. Correr `python train.py` para "
-                     "activar el LSTM real.")
+        self.note = ("STUB de desarrollo: no es un modelo entrenado. Devuelve una trayectoria "
+                     "derivada de un voidage de superficie crudo. Correr `make train "
+                     "MODEL=<nombre>` y levantar con ese MODEL para servir un modelo real.")
 
     def load(self) -> bool:
         return True  # no necesita artefacto
