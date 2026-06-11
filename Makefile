@@ -4,8 +4,9 @@ RUN_DIR  := .run
 API_PORT := 8000
 WEB_PORT := 5173
 PYTHON   := python3
+MODEL    ?= lstm
 
-.PHONY: help init up down restart logs test
+.PHONY: help init up up-docker down clean restart logs test train
 
 help: ## Muestra esta ayuda
 	@echo "Targets disponibles:"
@@ -19,7 +20,7 @@ up: up-docker ## Levanta la base de datos, backend y frontend en segundo plano
 	@echo "Aplicando migraciones..."
 	@cd $(API_DIR) && .venv/bin/alembic upgrade head
 	@mkdir -p $(RUN_DIR)
-	@( cd $(API_DIR) && exec .venv/bin/uvicorn main:app --port $(API_PORT) ) > $(RUN_DIR)/backend.log 2>&1 & echo $$! > $(RUN_DIR)/backend.pid
+	@( cd $(API_DIR) && MODEL=$(MODEL) exec .venv/bin/uvicorn main:app --port $(API_PORT) ) > $(RUN_DIR)/backend.log 2>&1 & echo $$! > $(RUN_DIR)/backend.pid
 	@( cd $(WEB_DIR) && exec node_modules/.bin/vite --port $(WEB_PORT) ) > $(RUN_DIR)/frontend.log 2>&1 & echo $$! > $(RUN_DIR)/frontend.pid
 	@echo "backend  → http://localhost:$(API_PORT)   (log: $(RUN_DIR)/backend.log)"
 	@echo "frontend → http://localhost:$(WEB_PORT)   (log: $(RUN_DIR)/frontend.log)"
@@ -44,3 +45,6 @@ logs: ## Sigue los logs de ambos procesos
 
 test: ## Corre los tests del backend
 	cd $(API_DIR) && PYTHONPATH=. .venv/bin/pytest -q
+
+train: ## Entrena un modelo y guarda su artefacto (make train MODEL=xgboost; default lstm)
+	cd $(API_DIR) && .venv/bin/python train.py --model $(MODEL)

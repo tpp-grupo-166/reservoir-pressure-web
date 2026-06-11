@@ -12,9 +12,10 @@ dist/
 *.local
 .vite/
 
-# Modelo entrenado
+# Modelos entrenados
 api/artifacts/*.pt
 api/artifacts/*.pkl
+api/artifacts/*.joblib
 
 # Makefile (PIDs y logs de `make up`)
 .run/

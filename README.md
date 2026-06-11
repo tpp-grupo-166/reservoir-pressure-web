@@ -7,8 +7,9 @@ Interfaz web + API para estimar la presión de un yacimiento de petróleo. El in
 sube la historia de producción y la tabla PVT de un campo y obtiene la trayectoria de
 presión estimada por el modelo de ML, con una explicación de cómo se procesaron sus datos.
 
-> **Estado:** MVP. Sirve el LSTM entrenado si el artefacto existe; si no, un stub de
-> desarrollo físicamente plausible (ver *El modelo*).
+> **Estado:** MVP. Sirve el modelo elegido por la env var `MODEL` (default: el LSTM del
+> notebook 5); sin artefacto entrenado cae a un stub de desarrollo físicamente plausible
+> (ver *Los modelos*).
 
 ## Estructura
 
@@ -16,6 +17,7 @@ presión estimada por el modelo de ML, con una explicación de cómo se procesar
 reservoir-pressure-web/
 ├── web/   → front React + Vite + TypeScript (gráficos con Recharts)
 └── api/   → backend FastAPI (validación + feature engineering + inferencia)
+    └── models/   → modelos enchufables, uno por archivo (ver "Los modelos")
 ```
 
 Flujo stateless: el front manda los datos a la API, que valida, construye features
@@ -48,6 +50,7 @@ make down      # baja ambos
 make restart   # reinicia ambos
 make logs      # sigue los logs
 make test      # ejecuta tests del backend
+make train     # entrena un modelo (MODEL=ridge|xgboost|lstm|pinn; default lstm)
 ```
 
 `make up` deja PIDs y logs en `.run/`. Tests del backend: `cd api && pytest -q`.
@@ -91,50 +94,79 @@ Comandos útiles en psql:
 SELECT * FROM users;  # ver todos los usuarios
 ```
 
-## El modelo
+## Los modelos
 
-El modelo del notebook 5 (LSTM + encoder de PVT) ya está implementado: arquitectura en
-`api/net.py`, entrenamiento en `api/train.py`, inferencia en `api/model.py`. La API sirve
-el modelo real si existe el artefacto entrenado; si no (p. ej. un clone limpio, porque
-`artifacts/*.pt` está gitignored), cae a un stub físicamente plausible pero no entrenado.
+Los modelos son enchufables: cada uno vive en `api/models/<nombre>.py`, se registra por
+nombre en `api/models/registry.py`, y la API sirve el que diga la variable de entorno
+`MODEL` (default: `lstm`). Si el elegido no puede cargar su artefacto (p. ej. un clone
+limpio, porque `artifacts/` está gitignored), cae al stub.
+
+| `MODEL` | origen | qué es | banda de incertidumbre |
+|---|---|---|---|
+| `lstm` (default) | notebook 5 | ensemble de 5 LSTM + encoder de PVT, secuencial | min/max del ensemble |
+| `ridge` | notebook 6 | lineal pointwise sobre features de superficie, sin PVT | ±1.96σ de residuos de CV |
+| `xgboost` | notebook 6 | árboles pointwise, mismas features que ridge | ±1.96σ de residuos de CV |
+| `pinn` | notebook 7 | balance de materiales + corrección neuronal (UDE), multi-campo | min/max de 3 seeds |
+| `stub` | — | proxy físico sin entrenamiento (fallback universal) | nominal ±3% |
+
+El contrato (`api/models/base.py`) es sobre los datos crudos del usuario (historia +
+estáticos + PVT): cada modelo hace su propio feature engineering adentro, porque los FE
+son deliberadamente distintos (el LSTM usa el vector PVT de 51D que ridge/xgboost
+descartan por leakage, y el pinn trabaja en volúmenes de reservorio).
+
+Todos entrenan y reportan métricas con el mismo split de Norne (24 train / 6 test) para
+que `/api/model-info` sea comparable entre modelos. La excepción parcial es el `pinn`,
+que suma Volve y SPE9 al train: su gracia es transferir entre regímenes termodinámicos
+vía la física compartida, aunque el test es el mismo. Los datos salen del repo del
+equipo (`tpp-grupo-166/opm-datasets`), de la variante `datasets/consistentes/`: la PVT
+de `datasets/` fue editada después de simular y rompe cualquier modelo de balance de
+materiales (ver el README de esa carpeta).
 
 ### Entrenar y activar
 
-Desde `api/` con el venv activado:
+Desde la raíz del repo (o `python train.py --model <nombre>` desde `api/`):
 
 ```bash
-pip install -r requirements-model.txt   # torch (no hace falta para el stub)
-python train.py                          # descarga Norne, entrena y guarda artifacts/model.pt
-make restart                             # (desde la raíz) recarga la API con el artefacto
+cd api && .venv/bin/pip install -r requirements-model.txt   # torch + sklearn + xgboost (una vez)
+make train MODEL=lstm    # descarga los datos, entrena y guarda artifacts/lstm.pt
+MODEL=lstm make up       # sirve ese modelo (MODEL es la misma env var que lee la API)
 ```
 
-Verificá con `curl -s localhost:8000/api/model-info`: `version` pasa de `stub-v0` a
-`lstm-pvt-notebook5-v1`.
+Son dos pasos independientes: **entrenar genera el artefacto** (una sola vez por modelo,
+queda en `artifacts/<nombre>.pt|.joblib`; el viejo `artifacts/model.pt` del LSTM se
+sigue leyendo) y **qué modelo se sirve lo decide `MODEL` al levantar la API**. Entrenar
+con la API ya levantada no cambia nada hasta el próximo `make restart MODEL=<nombre>`,
+y la elección no persiste: un `make up` a secas vuelve al default (`lstm`).
 
-> **Nota:** es el modelo más frágil según la auditoría (el transfer cross-reservoir depende
-> de la seed); las métricas que expone son del test in-distribution de Norne. Tratá la
-> estimación como preliminar.
+`ridge` y `xgboost` entrenan en segundos; `lstm` y `pinn` en minutos (CPU). Verificá con
+`curl -s localhost:8000/api/model-info` que `version` sea la esperada (p. ej.
+`lstm-pvt-notebook5-v1`); si dice `stub-v0`, el modelo pedido no tenía artefacto (o no
+está instalado `requirements-model.txt`) y la API cayó al stub.
 
-### Cambiar el modelo
+> **Nota:** las métricas que exponen todos son del test in-distribution de Norne, que es
+> poco exigente (las 30 sims son parecidas entre sí). El transfer a un campo nuevo es
+> otra historia (ver la auditoría y los notebooks 6-7): tratá la estimación como
+> preliminar, y la nota de cada artefacto como parte del resultado.
 
-El modelo está aislado en `api/model.py` → `Predictor`; reemplazarlo no toca endpoints,
-validación ni front. El contrato:
+### Agregar un modelo
 
-- **`load()`** — carga el artefacto (pesos + scalers) al levantar la API; si no existe, stub.
-- **`predict_band(history, static, pvt)`** — devuelve `(estimada, inf, sup)` en psi, una por
-  timestep.
-- **`baseline(history, static)`** — la curva de referencia (caída promedio del entrenamiento).
+1. Crear `api/models/<nombre>.py` con una subclase de `models.base.Model`: `load()`
+   (artefacto → listo para servir), `predict_band(history, static, pvt)` → `(estimada,
+   inf, sup)` en psi por timestep, `baseline(history, static)`, y opcionalmente `train()`.
+2. Registrarla en `api/models/registry.py`.
+3. `make train MODEL=<nombre>` y servir con `MODEL=<nombre> make up`.
 
-El modelo debe consumir las features de `api/features.py` (`build_features`) con los mismos
-nombres y orden con que fue entrenado; para cambiarlas, editar ahí y reentrenar.
+El FE va adentro del modelo (importá de `api/features.py` lo que sirva); helpers
+compartidos de datos en `api/models/datasets.py` y el baseline estándar en
+`models.base.baseline_from_curve`.
 
 ## Pendiente
 
 - API y endpoint de predicción
   - Migrar todo el endpoint de predicción y todas sus dependencias a la nueva estructura de la API.
-- Versionar/distribuir el artefacto entrenado (`artifacts/model.pt`): hoy cada quien lo
-  regenera con `python train.py`. Falta el canal de release (git-lfs o adjunto) para no
-  depender del entrenamiento local.
+- Versionar/distribuir los artefactos entrenados (`artifacts/<modelo>.pt|.joblib`): hoy
+  cada quien los regenera con `make train`. Falta el canal de release (git-lfs o adjunto)
+  para no depender del entrenamiento local.
 - Persistencia de predicciones (PostgreSQL)
   - Crear modelo de SQLAlchemy para `Prediction`.
   - Guardar cada predicción (inputs, outputs, versión del modelo, timestamp) al
@@ -145,10 +177,9 @@ nombres y orden con que fue entrenado; para cambiarlas, editar ahí y reentrenar
   - Vista de historial en el front: lista de consultas previas + reabrir un resultado.
 - Validar/avisar mejor cuando el rango de la tabla PVT no cubre las presiones de operación
   (la interpolación al grid del modelo ya está en `build_pvt_vector`).
-- Curva de presión por física (no-ML), para contrastar con el modelo
-  - Backend (`api/physics.py`): calcular una segunda trayectoria con balance de materiales
-    —el principio de que la presión cae cuando se produce más fluido del que se repone— y
-    sumarla a la respuesta de `/api/predict`.
-  - Front: dibujarla en `TrajectoryChart` junto a la curva del ML. Sirve de chequeo de
-    cordura (si se separan mucho, desconfiar del modelo) y le da credibilidad a la
-    herramienta frente a un ingeniero, que confía en el balance de materiales.
+- Curva de presión por física (no-ML) como segunda curva de contraste. El modelo `pinn`
+  ya sirve una trayectoria de balance de materiales como modelo elegible; lo que queda de
+  esta idea es mostrarla JUNTO a la del ML en `TrajectoryChart` (no crear `api/physics.py`
+  desde cero). Sirve de chequeo de cordura (si se separan mucho, desconfiar del modelo) y
+  le da credibilidad a la herramienta frente a un ingeniero, que confía en el balance de
+  materiales.
