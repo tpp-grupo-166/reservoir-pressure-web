@@ -22,7 +22,6 @@ export function ExplainPanel({ explainability, modelInfo }: Props) {
         <summary>Qué tan confiable es</summary>
         <p>
           R² medio {m.R2_medio.toFixed(2)} ± {m.R2_std.toFixed(2)} · MAE esperado ≈ {m.MAE_psi.toFixed(0)} psi
-          (validación cross-reservoir multi-seed).
         </p>
         <p className="explain__note">{modelInfo.nota}</p>
       </details>
