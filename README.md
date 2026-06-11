@@ -132,10 +132,16 @@ make train MODEL=lstm    # descarga los datos, entrena y guarda artifacts/lstm.p
 MODEL=lstm make up       # sirve ese modelo (MODEL es la misma env var que lee la API)
 ```
 
-`ridge` y `xgboost` entrenan en segundos; `lstm` y `pinn` en minutos (CPU). Cada
-artefacto va a `artifacts/<nombre>.pt|.joblib` (el viejo `artifacts/model.pt` del LSTM
-se sigue leyendo). Verificá con `curl -s localhost:8000/api/model-info` que `version`
-sea la esperada (p. ej. `lstm-pvt-notebook5-v1`).
+Son dos pasos independientes: **entrenar genera el artefacto** (una sola vez por modelo,
+queda en `artifacts/<nombre>.pt|.joblib`; el viejo `artifacts/model.pt` del LSTM se
+sigue leyendo) y **qué modelo se sirve lo decide `MODEL` al levantar la API**. Entrenar
+con la API ya levantada no cambia nada hasta el próximo `make restart MODEL=<nombre>`,
+y la elección no persiste: un `make up` a secas vuelve al default (`lstm`).
+
+`ridge` y `xgboost` entrenan en segundos; `lstm` y `pinn` en minutos (CPU). Verificá con
+`curl -s localhost:8000/api/model-info` que `version` sea la esperada (p. ej.
+`lstm-pvt-notebook5-v1`); si dice `stub-v0`, el modelo pedido no tenía artefacto (o no
+está instalado `requirements-model.txt`) y la API cayó al stub.
 
 > **Nota:** las métricas que exponen todos son del test in-distribution de Norne, que es
 > poco exigente (las 30 sims son parecidas entre sí). El transfer a un campo nuevo es
