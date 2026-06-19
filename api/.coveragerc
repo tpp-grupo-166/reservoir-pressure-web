@@ -1,0 +1,14 @@
+# Los modelos y su entrenamiento requieren el runtime de ML opcional
+# (requirements-model.txt: torch/sklearn/xgboost) que el CI no instala, así que sus
+# líneas no son ejecutables ahí; el contrato de cada modelo se verifica con
+# tests/test_models.py cuando hay artefactos locales. El mecanismo que SÍ corre en CI
+# (base, registry, stub, dispatcher de model.py) queda dentro de la métrica.
+[run]
+omit =
+    models/lstm.py
+    models/lstm_net.py
+    models/pinn.py
+    models/ridge.py
+    models/xgboost.py
+    models/datasets.py
+    train.py

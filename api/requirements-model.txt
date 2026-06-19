@@ -1,4 +1,7 @@
-# Dependencias para entrenar y servir el modelo real (no hacen falta para el stub).
-# torch desde el índice CPU (la build por defecto de PyPI trae CUDA, ~2 GB).
---index-url https://download.pytorch.org/whl/cpu
-torch==2.12.0
+# Dependencias para entrenar y servir los modelos reales (no hacen falta para el stub).
+# torch desde el índice CPU (la build por defecto de PyPI trae CUDA, ~2 GB); el pin
+# `+cpu` hace determinística la resolución contra el índice extra.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.12.0+cpu
+scikit-learn==1.9.0
+xgboost==3.2.0
